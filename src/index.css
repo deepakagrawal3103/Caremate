@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-gray-900 font-sans antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans font-bold text-gray-900;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-xl shadow-ambient p-4 transition-shadow duration-200;
+  }
+  
+  .card-tonal {
+    @apply bg-surface-low rounded-xl p-4;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white font-medium py-2 px-4 rounded-xl hover:bg-opacity-90 transition-all active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply bg-surface-low text-primary font-medium py-2 px-4 rounded-xl hover:bg-surface-lowest transition-all active:scale-[0.98];
+  }
+
+  .input-minimal {
+    @apply w-full bg-transparent border-b border-surface-lowest py-2 text-primary focus:outline-none focus:border-primary transition-colors;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-surface-lowest rounded-full hover:bg-secondary;
+}
