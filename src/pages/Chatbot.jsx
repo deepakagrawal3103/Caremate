@@ -2,24 +2,58 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
-import api from "../services/api";
+import { chatAPI } from "../features/chatbot/chatAPI";
+import { medicineAPI } from "../features/medicine/medicineAPI";
 import Button from "../components/Button";
 import Loader from "../components/Loader";
 
 export default function Chatbot() {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      type: "bot",
-      content: "Hello! I'm Sanjeevani AI assistant. I can answer your medicine-related questions based on your health profile. What would you like to know?",
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [userContext, setUserContext] = useState("");
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    loadChatHistory();
+    prepareContext();
+  }, []);
+
+  const prepareContext = async () => {
+    try {
+      const { data } = await medicineAPI.getAllMedicines();
+      const medsList = data.medicines.map(m => `${m.name} (${m.strength})`).join(", ");
+      setUserContext(`Patient is currently taking: ${medsList}`);
+    } catch (e) {
+      console.error("Context preparation failed", e);
+    }
+  };
+
+  const loadChatHistory = async () => {
+    try {
+      const { data } = await chatAPI.getChatHistory();
+      if (data.history.length > 0) {
+        const historyMessages = data.history.flatMap(h => [
+          { id: h.id + "_q", type: "user", content: h.question, timestamp: h.timestamp },
+          { id: h.id + "_a", type: "bot", content: h.answer, timestamp: h.timestamp }
+        ]);
+        setMessages(historyMessages);
+      } else {
+        setMessages([
+          {
+            id: 1,
+            type: "bot",
+            content: "Hello! I'm your CareMate AI assistant. I can answer your medicine-related questions based on your health profile. What would you like to know?",
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Failed to load history", error);
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -36,31 +70,24 @@ export default function Chatbot() {
       id: Date.now(),
       type: "user",
       content: input,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     };
     setMessages(prev => [...prev, userMessage]);
     setInput("");
     setLoading(true);
     
     try {
-      const { data } = await api.post("/chat", { question: input });
+      const { data } = await chatAPI.askQuestion(input, userContext);
       const botMessage = {
         id: Date.now() + 1,
         type: "bot",
         content: data.answer,
-        timestamp: new Date(),
-        risk: data.riskLevel,
+        timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
-      toast.error("Failed to get response. Please try again.");
-      const errorMessage = {
-        id: Date.now() + 1,
-        type: "bot",
-        content: "Sorry, I'm having trouble connecting. Please check your internet and try again.",
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      console.error("Technical Chat Error:", error);
+      toast.error(`Error: ${error.message || "Failed to get response"}`);
     } finally {
       setLoading(false);
       inputRef.current?.focus();

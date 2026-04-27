@@ -13,12 +13,20 @@ import {
   ExternalLink,
   Smartphone,
   Eye,
-  Mail
+  Mail,
+  LogOut
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   const sections = [
     {
@@ -114,6 +122,15 @@ export default function Settings() {
            </div>
            <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-100 rounded-xl font-bold text-[0.85rem] text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
               Access Keys <ExternalLink size={14} />
+           </button>
+        </div>
+
+        <div className="mt-8">
+           <button 
+             onClick={handleLogout}
+             className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-colors"
+           >
+              <LogOut size={20} /> Logout from Clinical Suite
            </button>
         </div>
 

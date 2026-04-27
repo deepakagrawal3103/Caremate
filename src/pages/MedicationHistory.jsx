@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   ChevronLeft, 
@@ -15,42 +15,71 @@ import {
   ArrowRight,
   Download
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { medicationLogsAPI } from '../features/medicine/medicationLogsAPI';
+import toast from 'react-hot-toast';
+import Loader from '../components/Loader';
 
 export default function MedicationHistory() {
+  const { user } = useAuth();
   const [filter, setFilter] = useState('Weekly');
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    if (user) {
+      fetchLogs();
+    }
+  }, [user]);
+
+  const fetchLogs = async () => {
+    try {
+      const { data } = await medicationLogsAPI.getLogs();
+      setLogs(data.logs);
+    } catch (error) {
+      toast.error("Failed to load history");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredLogs = logs.filter(log => 
+    log.medicineName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    log.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    log.status.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const takenCount = filteredLogs.filter(l => l.status === "Taken").length;
+  const missedCount = filteredLogs.filter(l => l.status === "Missed").length;
+  const adherence = filteredLogs.length > 0 ? Math.round((takenCount / filteredLogs.length) * 100) : 100;
 
   const stats = [
-    { label: "Overall Adherence", value: "94%", icon: <Activity className="text-[#0F766E]" />, sub: "+2% this month" },
-    { label: "Doses Taken", value: "128", icon: <CheckCircle2 className="text-[#0F766E]" />, sub: "Past 30 days" },
-    { label: "Doses Missed", value: "6", icon: <XCircle className="text-red-500" />, sub: "Action required" },
+    { label: "Overall Adherence", value: `${adherence}%`, icon: <Activity className="text-[#0F766E]" />, sub: "Based on logged data" },
+    { label: "Doses Taken", value: takenCount.toString(), icon: <CheckCircle2 className="text-[#0F766E]" />, sub: "Total records" },
+    { label: "Doses Missed", value: missedCount.toString(), icon: <XCircle className="text-red-500" />, sub: "Action required" },
   ];
 
-  const history = [
-    {
-      date: "Today, Oct 24",
-      items: [
-        { time: "08:00 AM", medicine: "Amlodipine", dose: "5mg", status: "Taken", type: "Hypertension" },
-        { time: "12:30 PM", medicine: "Metformin", dose: "500mg", status: "Upcoming", type: "Diabetes" },
-        { time: "06:00 PM", medicine: "Lisinopril", dose: "10mg", status: "Upcoming", type: "BP Control" },
-      ]
-    },
-    {
-      date: "Yesterday, Oct 23",
-      items: [
-        { time: "08:00 AM", medicine: "Amlodipine", dose: "5mg", status: "Taken", type: "Hypertension" },
-        { time: "12:30 PM", medicine: "Metformin", dose: "500mg", status: "Missed", type: "Diabetes" },
-        { time: "06:00 PM", medicine: "Lisinopril", dose: "10mg", status: "Taken", type: "BP Control" },
-      ]
-    },
-    {
-      date: "Oct 22, 2023",
-      items: [
-        { time: "08:00 AM", medicine: "Amlodipine", dose: "5mg", status: "Taken", type: "Hypertension" },
-        { time: "12:30 PM", medicine: "Metformin", dose: "500mg", status: "Taken", type: "Diabetes" },
-        { time: "06:00 PM", medicine: "Lisinopril", dose: "10mg", status: "Taken", type: "BP Control" },
-      ]
-    }
-  ];
+  const handleExport = () => {
+    toast.loading("Exporting History...");
+    setTimeout(() => {
+      window.print();
+      toast.dismiss();
+      toast.success("History exported successfully!");
+    }, 1500);
+  };
+
+  // Group logs by date
+  const groupedLogs = filteredLogs.reduce((groups, log) => {
+    const date = new Date(log.timestamp).toLocaleDateString('en-IN', { 
+      day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' 
+    });
+    if (!groups[date]) groups[date] = [];
+    groups[date].push(log);
+    return groups;
+  }, {});
+
+  if (loading) return <Loader />;
 
   return (
     <div className="flex-1 bg-[#F8FAFC] min-h-screen font-sans pb-20">
@@ -73,14 +102,16 @@ export default function MedicationHistory() {
             <input 
               type="text" 
               placeholder="Search history..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-[#F1F5F9] border-none rounded-lg py-2 pl-10 pr-4 text-[0.9rem] focus:ring-2 focus:ring-[#0F766E]/20"
             />
           </div>
           <Link to="/notifications" className="text-gray-400 hover:text-gray-900 p-1"><Bell size={20} /></Link>
           <Link to="/settings" className="text-gray-400 hover:text-gray-900 p-1"><Settings size={20} /></Link>
-          <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 shrink-0">
-             <img src="https://img.freepik.com/premium-vector/3d-avatar-young-man-with-glasses-shirt-vector-illustration_1150-65064.jpg" alt="User" className="w-full h-full object-cover" />
-          </div>
+          <Link to="/profile" className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 shrink-0 hover:opacity-80 transition-opacity">
+             <img src={user?.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} alt="User" className="w-full h-full object-cover" />
+          </Link>
         </div>
       </header>
 
@@ -118,7 +149,10 @@ export default function MedicationHistory() {
             <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-100 rounded-2xl font-bold text-[0.9rem] text-gray-700 shadow-sm hover:bg-gray-50 transition-all">
               <Calendar size={18} /> Select Date
             </button>
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-100 rounded-2xl font-bold text-[0.9rem] text-gray-700 shadow-sm hover:bg-gray-50 transition-all">
+            <button 
+              onClick={handleExport}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-100 rounded-2xl font-bold text-[0.9rem] text-gray-700 shadow-sm hover:bg-gray-50 transition-all"
+            >
               <Download size={18} /> Export
             </button>
           </div>
@@ -126,58 +160,51 @@ export default function MedicationHistory() {
 
         {/* History List */}
         <div className="space-y-10">
-          {history
-            .filter(day => {
-              if (filter === 'Daily') return day.date.includes('Today');
-              if (filter === 'Weekly') return true; // Show all mock data for weekly
-              return true; // Monthly
-            })
-            .map((day, i) => (
-            <div key={i}>
+          {Object.keys(groupedLogs).length > 0 ? Object.entries(groupedLogs).map(([date, items]) => (
+            <div key={date}>
               <div className="flex items-center gap-4 mb-6">
-                <h3 className="text-[1.1rem] font-bold text-gray-900 whitespace-nowrap">{day.date}</h3>
+                <h3 className="text-[1.1rem] font-bold text-gray-900 whitespace-nowrap">{date}</h3>
                 <div className="h-[1px] w-full bg-gray-100"></div>
               </div>
               <div className="space-y-4">
-                {day.items.map((item, j) => (
-                  <div key={j} className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-5 border border-gray-100 shadow-sm flex items-center gap-4 md:gap-6 hover:border-[#0F766E]/30 transition-all group cursor-pointer">
+                {items.map((item, j) => (
+                  <div key={item.id} className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-5 border border-gray-100 shadow-sm flex items-center gap-4 md:gap-6">
                     <div className="w-12 md:w-16 text-center shrink-0">
-                      <p className="text-[0.8rem] md:text-[0.85rem] font-black text-gray-900">{item.time.split(' ')[0]}</p>
-                      <p className="text-[0.6rem] md:text-[0.65rem] font-bold text-gray-400 uppercase tracking-tighter">{item.time.split(' ')[1]}</p>
+                      <p className="text-[0.85rem] font-black text-gray-900">
+                        {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
                     </div>
                     
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-gray-50 flex items-center justify-center shrink-0 group-hover:bg-[#0F766E]/5 transition-colors">
-                      <Pill size={20} className="text-gray-400 group-hover:text-[#0F766E] transition-colors" />
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-gray-50 flex items-center justify-center shrink-0">
+                      <Pill size={20} className="text-[#0F766E]" />
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-[0.95rem] md:text-[1rem] font-bold text-gray-900 truncate">{item.medicine}</h4>
-                      <p className="text-[0.75rem] md:text-[0.8rem] text-gray-400 font-medium truncate">{item.type} · {item.dose}</p>
+                      <h4 className="text-[0.95rem] md:text-[1rem] font-bold text-gray-900 truncate">{item.medicineName}</h4>
+                      <p className="text-[0.75rem] md:text-[0.8rem] text-gray-400 font-medium truncate">{item.type || "Medication"} · {item.dosage || "1 dose"}</p>
                     </div>
 
                     <div className="flex items-center gap-3 md:gap-6 shrink-0">
-                      <div className="hidden sm:block text-right">
-                         <span className={`text-[0.6rem] md:text-[0.65rem] font-black px-2 md:px-2.5 py-0.5 md:py-1 rounded-lg uppercase tracking-wider ${
-                           item.status === 'Taken' ? 'bg-[#F0FDFA] text-[#0F766E]' : 
-                           item.status === 'Missed' ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-400'
-                         }`}>
-                           {item.status}
-                         </span>
-                      </div>
-                      <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center ${
-                           item.status === 'Taken' ? 'text-[#0F766E]' : 
-                           item.status === 'Missed' ? 'text-red-500' : 'text-gray-200'
+                      <span className={`text-[0.65rem] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider ${
+                        item.status === 'Taken' ? 'bg-[#F0FDFA] text-[#0F766E]' : 'bg-red-50 text-red-600'
                       }`}>
-                        {item.status === 'Taken' && <CheckCircle2 size={24} md:size={28} fill="currentColor" className="text-white fill-[#0F766E]" />}
-                        {item.status === 'Missed' && <XCircle size={24} md:size={28} fill="currentColor" className="text-white fill-red-500" />}
-                        {item.status === 'Upcoming' && <Clock size={24} md:size={28} className="text-gray-200" />}
+                        {item.status}
+                      </span>
+                      <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center ${
+                        item.status === 'Taken' ? 'text-[#0F766E]' : 'text-red-500'
+                      }`}>
+                        {item.status === 'Taken' ? <CheckCircle2 size={24} fill="currentColor" className="text-white fill-[#0F766E]" /> : <XCircle size={24} fill="currentColor" className="text-white fill-red-500" />}
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-          ))}
+          )) : (
+            <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-gray-200">
+              <p className="text-gray-400 font-medium">No history found. Log your first dose!</p>
+            </div>
+          )}
         </div>
 
         {/* Load More */}

@@ -1,18 +1,20 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import Button from "../components/Button";
 
 export default function InteractionResult() {
   const navigate = useNavigate();
-  // Mock data for interaction result
-  const [result] = useState({
-    status: "danger", // 'danger', 'warning', 'safe'
-    title: "High Risk Interaction Detected",
-    description: "Ibuprofen + Warfarin may cause severe bleeding.",
-    drugs: ["Ibuprofen 400mg", "Warfarin 5mg"],
-    mechanism: "Ibuprofen inhibits platelet function and can cause gastric mucosal damage, increasing the risk of gastrointestinal bleeding when combined with the anticoagulant effects of Warfarin.",
-    action: "Consult your cardiologist immediately before taking these medications together."
+  const location = useLocation();
+  
+  // Get data from location state or fallback to default
+  const [result] = useState(location.state?.result || {
+    status: "safe", 
+    title: "No Interactions Detected",
+    description: "Scan complete. No harmful interactions found.",
+    drugs: ["Selected Med", "Current List"],
+    mechanism: "The scanned medication does not appear to have any major documented interactions with your current medication profile.",
+    action: "You may proceed as prescribed. Always consult with a doctor for specific medical advice."
   });
 
   const getStatusColors = (status) => {

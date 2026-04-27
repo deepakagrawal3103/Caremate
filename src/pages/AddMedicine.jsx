@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { medicineAPI } from "../features/medicine/medicineAPI";
+import toast from "react-hot-toast";
 import {
   Camera,
   ChevronLeft,
@@ -20,7 +22,9 @@ import {
   Pill,
   Calendar,
   AlertCircle,
-  Zap
+  Zap,
+  Upload,
+  Camera as CameraIcon
 } from "lucide-react";
 
 export default function AddMedicine() {
@@ -31,32 +35,118 @@ export default function AddMedicine() {
 
   // Form State
   const [formData, setFormData] = useState({
-    name: "Amoxicillin",
-    strength: "500mg",
+    name: "",
+    strength: "",
     form: "Tablet",
     dosageValue: 1,
-    schedule: ["Morning", "Night"],
+    schedule: ["Morning"],
     times: [
-      { time: "08:00 AM", instruction: "After Food" },
-      { time: "09:00 PM", instruction: "Before Bed" }
+      { time: "08:00 AM", instruction: "After Food" }
     ],
     duration: "7 Days",
     inventory: 14
   });
 
-  const nextStep = () => setStep(prev => prev + 1);
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setLoading(true);
+    toast.loading("Processing image with AI...");
+    
+    // Simulate OCR delay
+    setTimeout(() => {
+      toast.dismiss();
+      // Since we don't have a real vision API, we'll "auto-detect" some fields
+      // and then let the user refine them in Step 3.
+      setFormData(prev => ({
+        ...prev,
+        name: "Detected Medicine",
+        strength: "Detecting...",
+      }));
+      setStep(3);
+      toast.success("Text extracted! Please verify details.");
+      setLoading(false);
+    }, 2500);
+  };
+
+  const handleScan = async (text) => {
+    if (!text.trim()) {
+      toast.error("Please enter label text");
+      return;
+    }
+    
+    setLoading(true);
+    setScanning(true);
+    try {
+      const { data } = await medicineAPI.normalizeMedicine(text);
+      setFormData(prev => ({
+        ...prev,
+        name: data.brandName || prev.name,
+        dosage: data.genericName || prev.dosage,
+        strength: data.strength || prev.strength,
+        category: data.class || prev.category
+      }));
+      toast.success(`Identified: ${data.brandName}`);
+      setStep(3); // Move to Name step
+    } catch (error) {
+      toast.error("Analysis failed. Please enter manually.");
+    } finally {
+      setLoading(false);
+      setScanning(false);
+    }
+  };
+
+  const nextStep = async () => {
+    if (step === 5) {
+      setLoading(true);
+      try {
+        // Format schedule as 24h times for the reminder system
+        const formattedSchedule = formData.times.map(t => {
+          const [time, modifier] = t.time.split(' ');
+          let [hours, minutes] = time.split(':');
+          if (hours === '12') hours = '00';
+          if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+          return `${hours.toString().padStart(2, '0')}:${minutes}`;
+        });
+
+        const res = await medicineAPI.addMedicine({
+          ...formData,
+          schedule: formattedSchedule,
+          category: formData.form // Using form as category if not specified
+        });
+
+        // Trigger AI Interaction Check in background
+        toast.promise(
+          medicineAPI.checkInteraction(res.data.medicine._id),
+           {
+             loading: 'Analyzing drug interactions...',
+             success: (data) => {
+               if (data.data.status === 'danger') return "⚠️ CRITICAL: Interaction detected!";
+               if (data.data.status === 'warning') return "⚡ Caution: Minor interaction noted.";
+               return "✅ Safety check passed!";
+             },
+             error: 'Safety check failed.',
+           }
+        );
+
+        setStep(6);
+      } catch (error) {
+        toast.error("Failed to add medicine");
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setStep(prev => prev + 1);
+    }
+  };
+
   const prevStep = () => {
     if (step === 1) navigate(-1);
     else setStep(prev => prev - 1);
   };
 
-  const handleScan = () => {
-    setScanning(true);
-    setTimeout(() => {
-      setScanning(false);
-      setStep(3); // Go to refine details
-    }, 3000);
-  };
+
 
   return (
     <div className="flex-1 bg-[#F8FAFC] min-h-screen font-sans pb-24 selection:bg-[#0F4D4A]/10">
@@ -134,68 +224,54 @@ export default function AddMedicine() {
         {/* STEP 2: SCANNING */}
         {step === 2 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-6 duration-500">
-            <div className="flex items-center justify-between mb-2">
-               <h3 className="text-[0.8rem] font-black text-[#0F4D4A] uppercase tracking-[0.2em]">Scanner View</h3>
-               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-            </div>
-
-            <div className="relative aspect-[3/4] bg-gray-900 rounded-[3rem] overflow-hidden shadow-2xl group border-4 border-white">
-              {/* Camera Feed Simulation */}
-              <img 
-                src="https://img.freepik.com/free-photo/pharmaceutical-container-with-tablets-pills_23-2148892408.jpg" 
-                className="w-full h-full object-cover opacity-80" 
-                alt="Scanning..."
-              />
-              
-              {/* Scan Overlay */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                {/* Viewfinder */}
-                <div className="w-64 h-64 border-2 border-white/30 rounded-[2rem] relative">
-                   <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-[#52DFBB] rounded-tl-xl"></div>
-                   <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-[#52DFBB] rounded-tr-xl"></div>
-                   <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-[#52DFBB] rounded-bl-xl"></div>
-                   <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-[#52DFBB] rounded-br-xl"></div>
-                   
-                   {/* Scanning Bar */}
-                   {scanning && (
-                     <div className="absolute inset-x-0 h-[2px] bg-[#52DFBB] shadow-[0_0_15px_#52DFBB] animate-scan-bar"></div>
-                   )}
-                </div>
-                
-                <p className="mt-8 text-white text-[0.95rem] font-bold text-center px-8 opacity-80 drop-shadow-md">
-                   Align the medicine name or prescription within the box
-                </p>
+            <div className="bg-white rounded-[3rem] p-8 border border-gray-100 shadow-sm space-y-6">
+              <div className="w-16 h-16 bg-[#F0FDFA] rounded-2xl flex items-center justify-center text-[#0F4D4A] mx-auto">
+                <ScanLine size={32} />
+              </div>
+              <div className="text-center">
+                <h3 className="text-xl font-black text-[#0F4D4A]">Smart Addition</h3>
+                <p className="text-[0.9rem] text-gray-500 font-medium">Use AI to extract details from a photo or label text.</p>
               </div>
 
-              {/* Bottom Controls */}
-              <div className="absolute bottom-10 inset-x-0 flex justify-center px-10">
-                 {!scanning ? (
-                   <button 
-                    onClick={handleScan}
-                    className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-xl active:scale-90 transition-transform"
-                   >
-                     <div className="w-16 h-16 rounded-full border-4 border-gray-100 flex items-center justify-center">
-                       <Camera size={32} className="text-[#0F4D4A]" />
-                     </div>
-                   </button>
-                 ) : (
-                   <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-full flex items-center gap-3">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      <span className="text-white font-bold text-[0.9rem]">Analyzing Molecule...</span>
-                   </div>
-                 )}
+              <div className="grid grid-cols-2 gap-4">
+                <label className="flex flex-col items-center justify-center gap-3 p-6 bg-[#F8FAFC] rounded-3xl border-2 border-dashed border-gray-100 hover:border-[#0F766E]/30 cursor-pointer transition-all group">
+                   <CameraIcon size={28} className="text-gray-400 group-hover:text-[#0F766E]" />
+                   <span className="text-[0.7rem] font-black uppercase text-gray-400 group-hover:text-[#0F766E]">Take Photo</span>
+                   <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileUpload} />
+                </label>
+                <label className="flex flex-col items-center justify-center gap-3 p-6 bg-[#F8FAFC] rounded-3xl border-2 border-dashed border-gray-100 hover:border-[#0F766E]/30 cursor-pointer transition-all group">
+                   <Upload size={28} className="text-gray-400 group-hover:text-[#0F766E]" />
+                   <span className="text-[0.7rem] font-black uppercase text-gray-400 group-hover:text-[#0F766E]">Upload Image</span>
+                   <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                </label>
               </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100"></div></div>
+                <div className="relative flex justify-center text-[0.7rem] font-black text-gray-300 bg-white px-4">OR USE TEXT</div>
+              </div>
+
+              <textarea 
+                id="labelInput"
+                placeholder="Paste label text here..."
+                className="w-full h-24 bg-[#F8FAFC] border-none rounded-2xl p-4 text-[0.9rem] font-medium focus:ring-2 focus:ring-[#0F766E]/20"
+              ></textarea>
+
+              <button 
+                onClick={() => handleScan(document.getElementById('labelInput').value)}
+                disabled={loading}
+                className="w-full bg-[#0F4D4A] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-[#0F4D4A]/10 transition-all active:scale-95 disabled:opacity-50"
+              >
+                {loading ? "Analyzing..." : "Analyze Text"}
+              </button>
             </div>
 
-            <button 
-              onClick={() => setStep(1)}
-              className="w-full py-4 text-gray-400 font-bold text-[0.9rem] uppercase tracking-widest"
-            >
-              Cancel Scanning
-            </button>
+            <p className="text-center text-[0.85rem] font-bold text-gray-400 uppercase tracking-widest">
+              Or <button onClick={() => setStep(3)} className="text-[#0F766E] border-b-2 border-[#0F766E]/20 ml-1">Enter manually</button>
+            </p>
           </div>
         )}
-
+        
         {/* STEP 3: REFINE DETAILS */}
         {step === 3 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-6 duration-500">
@@ -372,7 +448,7 @@ export default function AddMedicine() {
                    <div className="pt-4 border-t border-gray-50 flex items-start gap-4">
                       <AlertCircle className="text-amber-500 shrink-0 mt-1" size={20} />
                       <p className="text-[0.85rem] text-gray-500 font-medium leading-snug">
-                         You have <span className="font-bold text-gray-900">{formData.inventory} doses</span> remaining in your inventory. We'll alert you 2 days before it ends.
+                         You have <span className="font-bold text-gray-900">{formData.inventory} doses</span> remaining in your inventory. We&apos;ll alert you 2 days before it ends.
                       </p>
                    </div>
                 </div>

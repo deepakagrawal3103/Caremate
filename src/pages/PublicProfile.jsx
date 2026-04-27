@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import api from "../services/api";
+import { emergencyAPI } from "../features/emergency/emergencyAPI";
 import { Briefcase, AlertTriangle, Pill as PillIcon, Contact, ShieldCheck } from "lucide-react";
 
 export default function PublicProfile() {
@@ -9,16 +9,17 @@ export default function PublicProfile() {
   const [patientData, setPatientData] = useState(null);
 
   useEffect(() => {
-    // In real app, fetch by id
-    // Mocking for now to match UI layout requirement
-    setTimeout(() => {
-      setPatientData({
-        name: "Arthur S. Vance",
-        bloodType: "O Negative",
-        risk: "High Risk",
-      });
-      setLoading(false);
-    }, 1000);
+    const fetchPatientData = async () => {
+      try {
+        const data = await emergencyAPI.getPublicProfile(id);
+        setPatientData(data);
+      } catch (error) {
+        console.error("Failed to fetch public profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (id) fetchPatientData();
   }, [id]);
 
   if (loading) {
@@ -38,7 +39,7 @@ export default function PublicProfile() {
         </div>
         <h1 className="text-3xl font-sans font-bold tracking-tight mb-2">{patientData?.name || "Patient Profile"}</h1>
         <div className="flex items-center justify-center gap-3 text-base font-medium tracking-wide text-white/80">
-          <span>Blood Type: {patientData?.bloodType || "O Negative"}</span>
+          <span>Blood Type: {patientData?.bloodGroup || "Unknown"}</span>
           <span>•</span>
           <span className="text-[#fbd0d0] font-bold">EMERGENCY ACCESS</span>
         </div>
@@ -64,14 +65,14 @@ export default function PublicProfile() {
             <span className="text-base font-bold tracking-widest uppercase text-secondary">CHRONIC CONDITIONS</span>
           </div>
           <div className="space-y-4">
-            <div className="flex justify-between items-center text-primary text-lg">
-              <span className="font-bold text-gray-900">Type 1 Diabetes Mellitus</span>
-              <span className="text-secondary text-base italic font-medium">Insulin Dependent</span>
-            </div>
-            <div className="flex justify-between items-center text-primary text-lg">
-              <span className="font-bold text-gray-900">Atrial Fibrillation</span>
-              <span className="text-secondary text-base italic font-medium">Paroxysmal</span>
-            </div>
+            {patientData?.chronicConditions?.length > 0 ? patientData.chronicConditions.map((condition, idx) => (
+              <div key={idx} className="flex justify-between items-center text-primary text-lg">
+                <span className="font-bold text-gray-900">{condition}</span>
+                <span className="text-secondary text-base italic font-medium">Recorded Case</span>
+              </div>
+            )) : (
+              <p className="text-gray-400 font-medium italic">No chronic conditions recorded</p>
+            )}
           </div>
         </div>
 
@@ -82,12 +83,13 @@ export default function PublicProfile() {
             <span className="text-base font-bold tracking-widest uppercase text-red-500">LIFE-THREATENING ALLERGIES</span>
           </div>
           <div className="flex flex-wrap gap-3 mt-1">
-            <div className="bg-red-50 px-5 py-[0.6rem] rounded-xl text-base font-bold text-red-500 shadow-sm ">
-              Penicillin (Severe)
-            </div>
-            <div className="bg-red-50 px-5 py-[0.6rem] rounded-xl text-base font-bold text-red-500 shadow-sm ">
-              Shellfish
-            </div>
+            {patientData?.allergies?.length > 0 ? patientData.allergies.map((allergy, idx) => (
+              <div key={idx} className="bg-red-50 px-5 py-[0.6rem] rounded-xl text-base font-bold text-red-500 shadow-sm ">
+                {allergy}
+              </div>
+            )) : (
+              <p className="text-gray-400 font-medium italic">No allergies recorded</p>
+            )}
           </div>
         </div>
 
@@ -98,20 +100,17 @@ export default function PublicProfile() {
             <span className="text-base font-bold tracking-widest uppercase text-secondary">CURRENT MEDICATION LOGS</span>
           </div>
           <div className="space-y-4">
-            <div className="bg-white border border-border p-6 rounded-2xl flex justify-between items-center shadow-sm ">
-              <div>
-                <h5 className="font-bold text-gray-900 text-lg mb-1">Eliquis (Apixaban)</h5>
-                <p className="text-gray-500 text-base font-semibold">Anticoagulant for Stroke Prevention</p>
+            {patientData?.medications?.length > 0 ? patientData.medications.map((med, idx) => (
+              <div key={idx} className="bg-white border border-border p-6 rounded-2xl flex justify-between items-center shadow-sm ">
+                <div>
+                  <h5 className="font-bold text-gray-900 text-lg mb-1">{med.name}</h5>
+                  <p className="text-gray-500 text-base font-semibold">{med.form || "Medication"}</p>
+                </div>
+                <span className="text-base font-bold text-[#506071]">{med.strength}</span>
               </div>
-              <span className="text-base font-bold text-[#506071]">5mg - Twice Daily</span>
-            </div>
-            <div className="bg-white border border-border p-6 rounded-2xl flex justify-between items-center shadow-sm ">
-              <div>
-                <h5 className="font-bold text-gray-900 text-lg mb-1">Humalog (Lispro)</h5>
-                <p className="text-gray-500 text-base font-semibold">Rapid-acting Insulin</p>
-              </div>
-              <span className="text-base font-bold text-[#506071]">Sliding Scale</span>
-            </div>
+            )) : (
+              <p className="text-gray-400 font-medium italic">No active medications found</p>
+            )}
           </div>
         </div>
 
@@ -122,15 +121,21 @@ export default function PublicProfile() {
             <span className="text-base font-bold tracking-widest uppercase text-white/90">PRIMARY EMERGENCY CONTACT</span>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-end justify-between">
-            <div>
-              <h4 className="font-sans font-bold text-white text-[1.7rem] mb-[0.35rem]">Eleanor Vance</h4>
-              <p className="text-base text-blue-200 font-medium tracking-wide">Spouse & Legal Proxy</p>
-            </div>
-            <div className="mt-4 sm:mt-0 flex flex-col items-start sm:items-end">
-              <a href="tel:+15559023481" className="font-bold text-white text-[1.15rem] tracking-wider mb-[0.35rem] bg-white/20 px-4 py-2 rounded-xl hover:bg-white/30 transition-colors">
-                Call +1 (555) 902-3481
-              </a>
-            </div>
+            {patientData?.emergencyContacts?.length > 0 ? (
+              <>
+                <div>
+                  <h4 className="font-sans font-bold text-white text-[1.7rem] mb-[0.35rem]">{patientData.emergencyContacts[0].name}</h4>
+                  <p className="text-base text-blue-200 font-medium tracking-wide">{patientData.emergencyContacts[0].relation || "Primary Contact"}</p>
+                </div>
+                <div className="mt-4 sm:mt-0 flex flex-col items-start sm:items-end">
+                  <a href={`tel:${patientData.emergencyContacts[0].phone}`} className="font-bold text-white text-[1.15rem] tracking-wider mb-[0.35rem] bg-white/20 px-4 py-2 rounded-xl hover:bg-white/30 transition-colors">
+                    Call {patientData.emergencyContacts[0].phone}
+                  </a>
+                </div>
+              </>
+            ) : (
+              <p className="text-white font-medium italic opacity-70">No emergency contacts listed</p>
+            )}
           </div>
         </div>
 

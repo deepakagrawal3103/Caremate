@@ -19,17 +19,26 @@ import PatientRecords from "./pages/PatientRecords";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import MedicationHistory from "./pages/MedicationHistory";
+import AddVitals from "./pages/AddVitals";
+import Login from "./pages/Login";
+import Profile from "./pages/Profile";
 
+
+import DoseReminder from "./components/DoseReminder";
+import { Toaster } from "react-hot-toast";
 
 function App() {
   return (
     <AuthProvider>
       <MobileMenuProvider>
+        <DoseReminder />
+        <Toaster />
         <div className="min-h-screen bg-background text-primary font-sans">
         <Routes>
           <Route path="/public/profile/:id" element={<PublicProfile />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/emergency-mode" element={<EmergencyMode />} />
+          <Route path="/login" element={<Login />} />
           
           <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/add-medicine" element={<PrivateRoute><AddMedicine /></PrivateRoute>} />
@@ -44,6 +53,8 @@ function App() {
           <Route path="/notifications" element={<PrivateRoute><Notifications /></PrivateRoute>} />
           <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
           <Route path="/medication-history" element={<PrivateRoute><MedicationHistory /></PrivateRoute>} />
+          <Route path="/add-vitals" element={<PrivateRoute><AddVitals /></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
 
           
           <Route path="*" element={<Navigate to="/" />} />
