@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import Button from "../components/Button";
@@ -6,11 +7,18 @@ import Input from "../components/Input";
 import toast from "react-hot-toast";
 
 export default function Login() {
+  const navigate = useNavigate();
+  const { login, register, isAuthenticated } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const { login, register } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
 
   const validate = () => {
     const newErrors = {};
@@ -51,6 +59,7 @@ export default function Login() {
       } else {
         await register({ name: formData.name, email: formData.email, password: formData.password });
         toast.success("Account created successfully!");
+        navigate("/onboarding");
       }
     } catch (err) {
       setErrors({ general: err.response?.data?.message || "An unexpected error occurred. Please try again." });

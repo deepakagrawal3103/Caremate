@@ -1,15 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useAuth } from "../hooks/useAuth";
 import Button from "../components/Button";
 import Input from "../components/Input";
 import { ChevronRight, ShieldCheck } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function Onboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     age: "",
+    bloodGroup: "",
+    height: "",
+    weight: "",
     diseases: [],
     allergies: [],
   });
@@ -30,9 +35,43 @@ export default function Onboarding() {
     }
   };
 
-  const handleComplete = () => {
-    // In real app, save to backend here
-    navigate("/");
+  const { updateUser } = useAuth();
+
+  const validateStep = () => {
+    if (step === 1) {
+      if (!formData.age || !formData.height || !formData.weight || !formData.bloodGroup) {
+        toast.error("Please fill in all basic identity fields");
+        return false;
+      }
+      if (formData.age < 1 || formData.height < 20 || formData.weight < 2) {
+        toast.error("Please enter realistic physical measurements");
+        return false;
+      }
+    }
+    if (step === 2 && formData.diseases.length === 0) {
+      if (!window.confirm("Continue without adding any chronic conditions?")) return false;
+    }
+    if (step === 3 && formData.allergies.length === 0) {
+      if (!window.confirm("Continue without adding any allergies? Critical for safety checks.")) return false;
+    }
+    return true;
+  };
+
+  const handleNext = () => {
+    if (validateStep()) {
+      setStep(step + 1);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!validateStep()) return;
+    try {
+      await updateUser(formData);
+      navigate("/");
+    } catch (error) {
+      console.error("Failed to complete setup:", error);
+      toast.error("Failed to save profile. Please try again.");
+    }
   };
 
   return (
@@ -52,15 +91,44 @@ export default function Onboarding() {
         {step === 1 && (
           <div className="space-y-6">
             <h2 className="text-base font-bold tracking-widest uppercase text-secondary">Basic Identity</h2>
+            <div className="grid grid-cols-2 gap-4">
+               <Input
+                 label="Age"
+                 type="number"
+                 value={formData.age}
+                 onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                 placeholder="e.g. 65"
+               />
+               <Input
+                 label="Height (cm)"
+                 type="number"
+                 value={formData.height}
+                 onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+                 placeholder="170"
+               />
+            </div>
             <Input
-              label="Age"
+              label="Weight (kg)"
               type="number"
-              value={formData.age}
-              onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-              placeholder="e.g. 65"
+              value={formData.weight}
+              onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+              placeholder="70"
             />
+            <div className="space-y-2">
+               <label className="text-[0.9rem] font-bold text-gray-700">Blood Group</label>
+               <select 
+                 className="w-full h-[56px] px-5 rounded-2xl bg-gray-50 border-none focus:ring-2 focus:ring-primary text-[1rem] font-medium"
+                 value={formData.bloodGroup}
+                 onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
+               >
+                 <option value="">Select Group</option>
+                 {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
+                   <option key={bg} value={bg}>{bg}</option>
+                 ))}
+               </select>
+            </div>
             <div className="pt-4">
-              <Button onClick={() => setStep(2)} fullWidth className="h-[56px] flex justify-between px-6">
+              <Button onClick={handleNext} fullWidth className="h-[56px] flex justify-between px-6">
                 <span>Continue</span>
                 <ChevronRight size={20} />
               </Button>
@@ -96,7 +164,7 @@ export default function Onboarding() {
 
             <div className="flex gap-4 pt-4">
               <Button onClick={() => setStep(1)} variant="secondary" className="px-6 h-[56px]">Back</Button>
-              <Button onClick={() => setStep(3)} fullWidth className="h-[56px] flex justify-between px-6">
+              <Button onClick={handleNext} fullWidth className="h-[56px] flex justify-between px-6">
                 <span>Continue</span>
                 <ChevronRight size={20} />
               </Button>

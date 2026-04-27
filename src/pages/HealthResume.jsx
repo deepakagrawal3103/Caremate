@@ -9,31 +9,41 @@ import {
   TrendingUp, 
   Pill, 
   Printer, 
-  History 
+  History,
+  Activity 
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { medicineAPI } from "../features/medicine/medicineAPI";
+import { vitalsAPI } from "../features/vitals/vitalsAPI";
+import toast from "react-hot-toast";
 
 export default function HealthResume() {
   const navigate = useNavigate();
-  const [resume, setResume] = useState({
-    user: {
-      name: "Rajesh Kumar",
-      age: "63",
-      gender: "Male",
-      diseases: ["Type 2 Diabetes"]
-    }
-  });
-  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const [medications, setMedications] = useState([]);
+  const [vitals, setVitals] = useState({ heartRate: "--", spo2: "--" });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchHealthResume();
-  }, []);
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
 
-  const fetchHealthResume = async () => {
+  const fetchData = async () => {
     try {
-      const { data } = await api.get("/health/resume", { silent: true });
-      if (data) setResume(data);
+      const [medsRes, vitalsRes] = await Promise.all([
+        medicineAPI.getAllMedicines(),
+        vitalsAPI.getLatestVitals()
+      ]);
+      setMedications(medsRes.data.medicines);
+      if (vitalsRes.data.vitals) {
+        setVitals(vitalsRes.data.vitals);
+      }
     } catch (error) {
-      console.log("Using cached health profile (backend offline)");
+      console.error("Resume fetch error:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -51,15 +61,15 @@ export default function HealthResume() {
   }
 
   // Fallback defaults if API misses them
-  const userData = resume?.user || {
-    name: "Rajesh Kumar",
-    age: "63",
-    gender: "Male"
+  const userData = user || {
+    name: "Guest User",
+    age: "--",
+    gender: "Not specified"
   };
-  const conditions = userData.diseases || ["Type 2 Diabetes"];
+  const conditions = userData.conditions || ["No recorded conditions"];
   const emergencyContact = {
-    name: "Sunita Kumar (Wife)",
-    phone: "+91 98765 43210"
+    name: userData.emergencyContactName || "Not set",
+    phone: userData.emergencyContactPhone || "Not set"
   };
 
   return (
@@ -97,12 +107,12 @@ export default function HealthResume() {
 
         {/* Profile Identity Card */}
         <section className="bg-white rounded-3xl shadow-sm border border-[#E5E7EB] p-6 md:p-10 flex flex-col lg:flex-row gap-8 md:gap-10 items-center mb-10">
-           <div className="w-32 h-32 md:w-48 md:h-48 rounded-3xl bg-[#F0FDFA] overflow-hidden shrink-0 relative flex items-center justify-center border border-[#CCFBF1]">
-              <img src="https://img.freepik.com/premium-vector/female-doctor-character-with-stethoscope-3d-avatar-vector-illustration_1150-65063.jpg" alt="Avatar" className="w-full h-full object-cover mix-blend-multiply" />
-              <div className="absolute top-2 right-2 md:top-3 md:right-3 w-8 h-8 md:w-10 md:h-10 bg-[#0F766E] rounded-xl md:rounded-2xl flex justify-center items-center text-white shadow-md">
-                <ShieldCheck className="w-4 h-4 md:w-5 md:h-5" />
-              </div>
-           </div>
+            <div className="w-32 h-32 md:w-48 md:h-48 rounded-3xl bg-[#F0FDFA] overflow-hidden shrink-0 relative flex items-center justify-center border border-[#CCFBF1]">
+               <img src={user?.photoURL || "https://img.freepik.com/premium-vector/female-doctor-character-with-stethoscope-3d-avatar-vector-illustration_1150-65063.jpg"} alt="Avatar" className="w-full h-full object-cover" />
+               <div className="absolute top-2 right-2 md:top-3 md:right-3 w-8 h-8 md:w-10 md:h-10 bg-[#0F766E] rounded-xl md:rounded-2xl flex justify-center items-center text-white shadow-md">
+                 <ShieldCheck className="w-4 h-4 md:w-5 md:h-5" />
+               </div>
+            </div>
            
            <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-8">
              <div>
@@ -112,16 +122,16 @@ export default function HealthResume() {
                <div className="space-y-4 md:space-y-5">
                   <div className="flex items-center justify-between pb-3 md:pb-4 border-b border-[#E5E7EB]">
                     <span className="text-[0.95rem] md:text-[1.05rem] font-semibold text-gray-500">Biological Age</span>
-                    <span className="font-bold text-gray-900 text-lg md:text-xl">{userData.age} {userData.age ? 'Years' : ''}</span>
+                    <span className="font-bold text-gray-900 text-lg md:text-xl">{user?.age || "--"} {user?.age ? 'Years' : ''}</span>
                   </div>
                   <div className="flex items-center justify-between pb-3 md:pb-4 border-b border-[#E5E7EB]">
                     <span className="text-[0.95rem] md:text-[1.05rem] font-semibold text-gray-500">Primary Condition</span>
-                    <span className="text-[0.85rem] md:text-[1.05rem] font-bold text-[#059669] bg-[#ecfdf5] px-3 md:px-4 py-1 md:py-1.5 rounded-xl tracking-wide">{conditions[0] || "Undiagnosed"}</span>
+                    <span className="text-[0.85rem] md:text-[1.05rem] font-bold text-[#059669] bg-[#ecfdf5] px-3 md:px-4 py-1 md:py-1.5 rounded-xl tracking-wide">{user?.conditions?.[0] || "Undiagnosed"}</span>
                   </div>
-                  <div className="flex items-center justify-between pb-1">
-                    <span className="text-[0.95rem] md:text-[1.05rem] font-semibold text-gray-500">Blood Group</span>
-                    <span className="font-bold text-[#DC2626] text-lg md:text-xl">O Positive</span>
-                  </div>
+                   <div className="flex items-center justify-between pb-3 md:pb-4 border-b border-[#E5E7EB]">
+                     <span className="text-[0.95rem] md:text-[1.05rem] font-semibold text-gray-500">Blood Group</span>
+                     <span className="font-bold text-[#DC2626] text-lg md:text-xl">{user?.bloodGroup || "Not set"}</span>
+                   </div>
                </div>
              </div>
              
@@ -226,37 +236,23 @@ export default function HealthResume() {
                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Medications</h3>
              </div>
 
-             <div className="space-y-6 flex-1">
-               <div className="flex gap-4 items-center bg-[#F8FAFC] border border-[#E5E7EB] p-4 rounded-2xl">
-                 <div className="w-14 h-14 rounded-2xl bg-white shadow-sm flex justify-center items-center shrink-0 text-[#0F766E]">
-                   <Pill className="w-6 h-6" />
-                 </div>
-                 <div>
-                    <h5 className="font-bold text-gray-900 text-[1.05rem]">Lisinopril</h5>
-                    <p className="text-[0.8rem] text-gray-500 font-bold uppercase tracking-widest mt-0.5">10MG • DAILY AM</p>
-                 </div>
-               </div>
-
-               <div className="flex gap-4 items-center bg-[#F8FAFC] border border-[#E5E7EB] p-4 rounded-2xl">
-                 <div className="w-14 h-14 rounded-2xl bg-white shadow-sm flex justify-center items-center shrink-0 text-[#059669]">
-                   <Pill className="w-6 h-6" />
-                 </div>
-                 <div>
-                    <h5 className="font-bold text-gray-900 text-[1.05rem]">Atorvastatin</h5>
-                    <p className="text-[0.8rem] text-gray-500 font-bold uppercase tracking-widest mt-0.5">20MG • NIGHTLY</p>
-                 </div>
-               </div>
-
-               <div className="flex gap-4 items-center bg-gray-50 border border-[#E5E7EB] p-4 rounded-2xl opacity-70">
-                 <div className="w-14 h-14 rounded-2xl bg-gray-200 flex justify-center items-center shrink-0 text-gray-400">
-                   <Pill className="w-6 h-6" />
-                 </div>
-                 <div>
-                    <h5 className="font-bold text-gray-500 text-[1.05rem]">Metformin</h5>
-                    <p className="text-[0.8rem] text-gray-400 font-bold uppercase tracking-widest mt-0.5">500MG • DISCONTINUED</p>
-                 </div>
-               </div>
-             </div>
+              <div className="space-y-6 flex-1">
+                {medications.length > 0 ? medications.map((med) => (
+                  <div key={med._id} className="flex gap-4 items-center bg-[#F8FAFC] border border-[#E5E7EB] p-4 rounded-2xl">
+                    <div className="w-14 h-14 rounded-2xl bg-white shadow-sm flex justify-center items-center shrink-0 text-[#0F766E]">
+                      <Pill className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h5 className="font-bold text-gray-900 text-[1.05rem]">{med.name}</h5>
+                        <p className="text-[0.8rem] text-gray-500 font-bold uppercase tracking-widest mt-0.5">
+                          {med.strength || "N/A"} • {med.schedule?.join(", ") || "No schedule"}
+                        </p>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="text-center py-6 text-gray-400 italic">No medications found.</div>
+                )}
+              </div>
 
              <div className="mt-8 pt-6 border-t border-[#E5E7EB]">
                  <button className="w-full bg-[#0F766E] hover:bg-[#047857] text-white py-4 rounded-2xl text-[1.05rem] font-bold transition-all flex items-center justify-center gap-2 shadow-md">
@@ -293,25 +289,11 @@ export default function HealthResume() {
                  </thead>
                  <tbody className="text-[0.95rem] md:text-[1.05rem] text-gray-900 font-medium">
                    <tr className="border-b border-[#E5E7EB] hover:bg-[#F8FAFC] transition-colors">
-                     <td className="py-6 font-bold text-gray-900">Oct 12, 2023</td>
-                     <td className="py-6 text-gray-700">Tachycardia Episode</td>
-                     <td className="py-6 font-bold text-[#DC2626]">114 BPM</td>
+                     <td className="py-6 font-bold text-gray-900">{new Date().toLocaleDateString()}</td>
+                     <td className="py-6 text-gray-700">Initial Assessment</td>
+                     <td className="py-6 font-bold text-[#0F766E]">Active</td>
                      <td className="py-6"><span className="bg-[#ecfdf5] text-[#059669] px-3 py-1.5 rounded-xl text-[0.75rem] md:text-[0.85rem] font-bold uppercase tracking-wider">Resolved</span></td>
-                     <td className="py-6 text-gray-500">Caregiver notified, patient rested for 20m.</td>
-                   </tr>
-                   <tr className="border-b border-[#E5E7EB] hover:bg-[#F8FAFC] transition-colors">
-                     <td className="py-6 font-bold text-gray-900">Sep 28, 2023</td>
-                     <td className="py-6 text-gray-700">Medication Missed</td>
-                     <td className="py-6 font-semibold text-gray-500">Lisinopril</td>
-                     <td className="py-6"><span className="bg-[#ecfdf5] text-[#059669] px-3 py-1.5 rounded-xl text-[0.75rem] md:text-[0.85rem] font-bold uppercase tracking-wider">Resolved</span></td>
-                     <td className="py-6 text-gray-500">Dosage taken at 14:00. Logged.</td>
-                   </tr>
-                   <tr className="border-b border-[#E5E7EB] hover:bg-[#F8FAFC] transition-colors">
-                     <td className="py-6 font-bold text-gray-900">Aug 15, 2023</td>
-                     <td className="py-6 text-gray-700">Oxygen Desat</td>
-                     <td className="py-6 font-bold text-[#D97706]">91% SpO2</td>
-                     <td className="py-6"><span className="bg-[#ecfdf5] text-[#059669] px-3 py-1.5 rounded-xl text-[0.75rem] md:text-[0.85rem] font-bold uppercase tracking-wider">Resolved</span></td>
-                     <td className="py-6 text-gray-500">Adjusted ventilation mask fit.</td>
+                     <td className="py-6 text-gray-500">Profile synchronized with clinical engine.</td>
                    </tr>
                  </tbody>
                </table>
@@ -328,7 +310,7 @@ export default function HealthResume() {
             </div>
             <div>
               <span className="block text-[0.8rem] uppercase font-bold tracking-widest text-gray-400 mb-1">Generated At</span>
-              <span className="text-gray-500 font-semibold">Jan 24, 2024 | 09:42:12 GMT</span>
+              <span className="text-gray-500 font-semibold">{new Date().toLocaleString()}</span>
             </div>
           </div>
           <div className="mt-8 md:mt-0">

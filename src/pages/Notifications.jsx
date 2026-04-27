@@ -14,55 +14,45 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+import { useAuth } from "../context/AuthContext";
+import { medicineAPI } from "../features/medicine/medicineAPI";
+
 export default function Notifications() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [meds, setMeds] = React.useState([]);
 
-  const notifications = [
+  React.useEffect(() => {
+    medicineAPI.getAllMedicines().then(res => setMeds(res.data.medicines));
+  }, []);
+
+  const generatedNotifications = meds.filter(m => m.inventory < 5).map(m => ({
+    id: m._id,
+    type: 'warning',
+    title: 'Low Stock Alert',
+    message: `Your supply of ${m.name} is running low (${m.inventory} units remaining). Please refill soon.`,
+    time: 'System Update',
+    read: false,
+    color: 'text-[#EA580C]',
+    bg: 'bg-[#FFF7ED]',
+    icon: <Clock size={18} />
+  }));
+
+  const staticNotifications = [
     {
-      id: 1,
-      type: 'alert',
-      title: 'Critical Adherence Missing',
-      message: 'Rajesh Kumar missed his morning dose of Amlodipine (5mg). High BP risk.',
-      time: '12 mins ago',
-      read: false,
-      color: 'text-[#B91C1C]',
-      bg: 'bg-[#FEF2F2]',
-      icon: <AlertCircle size={18} />
-    },
-    {
-      id: 2,
+      id: 'welcome',
       type: 'success',
-      title: 'Report Generated Successfully',
-      message: 'Q3 Clinical Outcome Summary is now available for download in Patient Records.',
-      time: '2 hours ago',
+      title: 'Profile Synchronized',
+      message: `Welcome ${user?.name || "Patient"}! Your health profile is now active and protected by MedSecure AI.`,
+      time: 'Just now',
       read: true,
       color: 'text-[#0F766E]',
       bg: 'bg-[#F0FDFA]',
       icon: <CheckCircle2 size={18} />
-    },
-    {
-      id: 3,
-      type: 'info',
-      title: 'New Protocol Update',
-      message: 'Cardiac emergency protocols have been updated following the latest clinical guidelines.',
-      time: '5 hours ago',
-      read: true,
-      color: 'text-[#2563EB]',
-      bg: 'bg-[#EFF6FF]',
-      icon: <Info size={18} />
-    },
-    {
-      id: 4,
-      type: 'warning',
-      title: 'Subscription Renewal',
-      message: 'Your Clinical Suite license will expire in 7 days. Please renew to avoid service interruption.',
-      time: '1 day ago',
-      read: true,
-      color: 'text-[#EA580C]',
-      bg: 'bg-[#FFF7ED]',
-      icon: <Clock size={18} />
     }
   ];
+
+  const notifications = [...generatedNotifications, ...staticNotifications];
 
   return (
     <div className="flex-1 bg-[#F8FAFC] min-h-screen font-sans">

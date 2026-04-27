@@ -1,14 +1,83 @@
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Search, Bell, Settings, AlertTriangle, Pill as PillIcon, X, Calendar, Phone, BrainCog, FileText, ExternalLink, CheckCircle2, ChevronLeft } from "lucide-react";
+import { Search, Bell, Settings, AlertTriangle, Pill as PillIcon, X, Calendar, Phone, BrainCog, FileText, ExternalLink, CheckCircle2, ChevronLeft, ShieldCheck, Activity } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { medicineAPI } from "../features/medicine/medicineAPI";
+import { vitalsAPI } from "../features/vitals/vitalsAPI";
+import { aiService } from "../services/ai";
+import toast from "react-hot-toast";
+import Loader from "../components/Loader";
 
 export default function RiskScore() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [medications, setMedications] = useState([]);
+  const [vitals, setVitals] = useState({ heartRate: 72, spo2: 98 });
+  const [analysis, setAnalysis] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [score, setScore] = useState(12);
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
+
+  const fetchData = async () => {
+    try {
+      const [medsRes, vitalsRes] = await Promise.all([
+        medicineAPI.getAllMedicines(),
+        vitalsAPI.getLatestVitals()
+      ]);
+      
+      const meds = medsRes.data.medicines;
+      setMedications(meds);
+      
+      if (vitalsRes) {
+        setVitals({
+          heartRate: vitalsRes.hr || 72,
+          spo2: vitalsRes.spo2 || 98
+        });
+      }
+
+      // Run AI Analysis if there are at least 2 medications
+      if (meds.length >= 2) {
+        const medNames = meds.map(m => m.name).join(", ");
+        const result = await aiService.askAI(
+          `Analyze these medications for potential interactions: ${medNames}. 
+           Format the response as JSON with: { "hasConflict": boolean, "score": number, "rationale": string, "protocol": string[], "severity": "low"|"medium"|"high" }`,
+          "You are a clinical pharmacist. Only return JSON."
+        );
+        
+        try {
+          const jsonMatch = result.match(/\{.*\}/s);
+          const analysisData = JSON.parse(jsonMatch ? jsonMatch[0] : result);
+          setAnalysis(analysisData);
+          setScore(analysisData.score || 12);
+        } catch (e) {
+          console.error("AI Parse Error", e);
+          setAnalysis({ hasConflict: false, rationale: result || "No significant interactions detected by AI.", score: 12 });
+        }
+      } else {
+        setAnalysis({ hasConflict: false, rationale: "Add more medications to check for interactions.", score: 5 });
+        setScore(5);
+      }
+    } catch (error) {
+      console.error("Safety Analysis Error:", error);
+      toast.error("Failed to run safety analysis");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader /></div>;
+  
   return (
     <div className="flex-1 bg-[#F8FAFC] min-h-screen font-sans">
       {/* Header - Desktop ONLY */}
       <header className="hidden lg:flex px-4 md:px-8 items-center justify-between bg-white border-b border-gray-100 sticky top-0 z-10 h-[64px] md:h-[72px]">
          <div className="flex items-center gap-3 md:gap-4">
-            <span className="text-[#0F766E] font-bold text-[1.1rem] md:text-[1.2rem] tracking-tight">MedSafe</span>
+            <span className="text-[#0F766E] font-bold text-[1.1rem] md:text-[1.2rem] tracking-tight">CareMate</span>
          </div>
          <div className="flex-1 max-w-[400px] mx-4 hidden md:block">
             <div className="relative">
@@ -23,21 +92,19 @@ export default function RiskScore() {
             <button className="text-gray-400 hover:text-gray-900 transition-colors p-1 md:p-0">
                <Settings className="w-[18px] h-[18px] fill-current" />
             </button>
-            <div className="w-8 h-8 md:w-9 md:h-9 rounded-full overflow-hidden border border-gray-200 shrink-0">
-               <img src="https://img.freepik.com/premium-vector/3d-avatar-young-man-with-glasses-shirt-vector-illustration_1150-65064.jpg" alt="User" className="w-full h-full object-cover" />
-            </div>
+            <Link to="/profile" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+              <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-200">
+                <img src={user?.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} alt="User" className="w-full h-full object-cover" />
+              </div>
+            </Link>
          </div>
       </header>
 
       <main className="px-5 py-6 mx-auto max-w-[1000px] relative pb-24">
-         {/* MOBILE VIEW (Exactly like Screenshot 3) */}
+         {/* MOBILE VIEW */}
          <div className="lg:hidden space-y-6">
-            {/* Header */}
             <div className="flex items-center justify-between pt-2">
-               <button 
-                  onClick={() => window.history.back()}
-                  className="p-1 text-[#0F4D4A]"
-               >
+               <button onClick={() => window.history.back()} className="p-1 text-[#0F4D4A]">
                   <ChevronLeft size={28} />
                </button>
                <h1 className="text-[1.2rem] font-bold text-[#0F4D4A] tracking-tight">CareMate</h1>
@@ -48,27 +115,31 @@ export default function RiskScore() {
 
             <div className="px-1">
                <h1 className="text-[1.8rem] font-black text-gray-900 leading-tight">Personal Safety Report</h1>
-               <p className="text-gray-500 text-[0.9rem] font-medium mt-1">Generated by MedSafe AI Clinical Engine</p>
+               <p className="text-gray-500 text-[0.9rem] font-medium mt-1">Generated by CareMate AI Clinical Engine</p>
             </div>
 
             {/* Critical Findings Card */}
-            <div className="bg-[#FEFCE8] border border-[#FEF08A] rounded-[2rem] p-6 shadow-sm">
+            <div className={`${analysis?.hasConflict ? 'bg-[#FEFCE8] border-[#FEF08A]' : 'bg-[#F0FDFA] border-[#CCFBF1]'} rounded-[2rem] p-6 shadow-sm`}>
                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#FDE68A] flex items-center justify-center text-[#92400E]">
-                     <AlertTriangle size={22} fill="currentColor" className="text-white" />
+                  <div className={`w-10 h-10 rounded-xl ${analysis?.hasConflict ? 'bg-[#FDE68A] text-[#92400E]' : 'bg-[#CCFBF1] text-[#0F766E]'} flex items-center justify-center`}>
+                     {analysis?.hasConflict ? <AlertTriangle size={22} fill="currentColor" className="text-white" /> : <ShieldCheck size={22} />}
                   </div>
-                  <h3 className="text-[1.1rem] font-black text-[#92400E]">Critical Findings</h3>
+                  <h3 className={`text-[1.1rem] font-black ${analysis?.hasConflict ? 'text-[#92400E]' : 'text-[#0F766E]'}`}>
+                    {analysis?.hasConflict ? 'Critical Findings' : 'System Clear'}
+                  </h3>
                </div>
                <div className="space-y-4">
                   <div>
-                     <h4 className="text-[1rem] font-black text-gray-900 mb-1">Elevated Cardiovascular Risk</h4>
+                     <h4 className="text-[1rem] font-black text-gray-900 mb-1">
+                       {analysis?.hasConflict ? 'Potential Interaction Detected' : 'Safety Check Optimal'}
+                     </h4>
                      <div className="flex items-center gap-2">
-                        <span className="text-[1.4rem] font-black text-[#B91C1C]">74% Score</span>
-                        <span className="text-[0.65rem] font-black text-white bg-[#B91C1C] px-2 py-0.5 rounded-md uppercase tracking-tighter">ACTION REQUIRED</span>
+                        <span className={`text-[1.4rem] font-black ${score > 50 ? 'text-[#B91C1C]' : 'text-[#0F766E]'}`}>{score}% Score</span>
+                        {analysis?.hasConflict && <span className="text-[0.65rem] font-black text-white bg-[#B91C1C] px-2 py-0.5 rounded-md uppercase tracking-tighter">ACTION REQUIRED</span>}
                      </div>
                   </div>
                   <p className="text-[0.85rem] text-gray-600 font-medium leading-relaxed">
-                     A combination of Metformin and Lisinopril requires dosage adjustment due to shifting vitals. Contact cardiologist for a clinical review.
+                     {analysis?.rationale}
                   </p>
                </div>
             </div>
@@ -82,10 +153,10 @@ export default function RiskScore() {
                <div className="relative w-48 h-48 mx-auto mb-8">
                   <svg className="w-full h-full transform -rotate-90">
                      <circle cx="96" cy="96" r="82" stroke="#F1F5F9" strokeWidth="18" fill="none" />
-                     <circle cx="96" cy="96" r="82" stroke="#0F766E" strokeWidth="18" fill="none" strokeDasharray="515.2" strokeDashoffset={515.2 * (1 - 0.74)} strokeLinecap="round" />
+                     <circle cx="96" cy="96" r="82" stroke={score > 50 ? "#B91C1C" : "#0F766E"} strokeWidth="18" fill="none" strokeDasharray="515.2" strokeDashoffset={515.2 * (1 - score/100)} strokeLinecap="round" />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pt-2">
-                     <span className="text-[3.2rem] font-black text-gray-900 leading-none">74<span className="text-[1.5rem] text-gray-400 font-bold">%</span></span>
+                     <span className="text-[3.2rem] font-black text-gray-900 leading-none">{score}<span className="text-[1.5rem] text-gray-400 font-bold">%</span></span>
                      <span className="text-[0.7rem] font-black text-gray-400 mt-2 uppercase tracking-[0.2em]">Risk Score</span>
                   </div>
                </div>
@@ -100,11 +171,11 @@ export default function RiskScore() {
             <div className="bg-[#0F172A] rounded-[2rem] p-8 shadow-xl text-white">
                <div className="flex items-center gap-4 mb-6">
                   <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center text-white overflow-hidden">
-                     <img src="https://img.freepik.com/premium-vector/female-doctor-character-with-stethoscope-3d-avatar-vector-illustration_1150-65063.jpg" alt="Doctor" className="w-full h-full object-cover" />
+                     <img src={user?.doctorPhoto || "https://ui-avatars.com/api/?name=Doctor&background=0F766E&color=fff"} alt="Doctor" className="w-full h-full object-cover" />
                   </div>
                   <div>
-                     <h3 className="text-[1.05rem] font-black text-white leading-tight">Dr. Arthur B. Sterling</h3>
-                     <p className="text-gray-400 text-[0.8rem] font-medium">Last Review: 12 Oct 2023</p>
+                     <h3 className="text-[1.05rem] font-black text-white leading-tight">{user?.doctorName || "Primary Care Physician"}</h3>
+                     <p className="text-gray-400 text-[0.8rem] font-medium">Last Review: {new Date().toLocaleDateString()}</p>
                   </div>
                </div>
 
@@ -119,167 +190,130 @@ export default function RiskScore() {
             </div>
 
             <div className="text-center pt-4">
-               <p className="text-gray-400 text-[0.7rem] font-medium tracking-tight">ID: AR-90823-X | Time Generated: 14:02:11 GMT+0</p>
+               <p className="text-gray-400 text-[0.7rem] font-medium tracking-tight">ID: AR-{user?.uid?.slice(0, 5)} | Time Generated: {new Date().toLocaleTimeString()}</p>
             </div>
          </div>
 
-         {/* DESKTOP VIEW - PRESERVED */}
+         {/* DESKTOP VIEW */}
          <div className="hidden lg:block">
-            {/* Alert Header - Responsive */}
             <div className="flex flex-col items-center justify-center text-center mb-10 px-4">
-               <div className="bg-[#fef2f2] border border-[#fecaca] text-[#b91c1c] px-3 md:px-4 py-1.5 rounded-full flex items-center gap-2 font-bold text-[0.75rem] md:text-[0.8rem] uppercase tracking-widest shadow-sm mb-6">
-                  <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4 fill-[#b91c1c] text-white" strokeWidth={1} /> CRITICAL ALERT
+               <div className={`${analysis?.hasConflict ? 'bg-[#fef2f2] border-[#fecaca] text-[#b91c1c]' : 'bg-[#F0FDFA] border-[#CCFBF1] text-[#0F766E]'} px-3 md:px-4 py-1.5 rounded-full flex items-center gap-2 font-bold text-[0.75rem] md:text-[0.8rem] uppercase tracking-widest shadow-sm mb-6`}>
+                  {analysis?.hasConflict ? <AlertTriangle className="w-4 h-4 fill-[#b91c1c] text-white" strokeWidth={1} /> : <ShieldCheck className="w-4 h-4" />}
+                  {analysis?.hasConflict ? 'CRITICAL ALERT' : 'SAFETY VERIFIED'}
                </div>
-               <h1 className="text-[1.3rem] md:text-[1.6rem] font-bold text-[#b91c1c] mb-3 tracking-[0.02em] leading-tight">DANGEROUS INTERACTION DETECTED</h1>
+               <h1 className={`text-[1.3rem] md:text-[1.6rem] font-bold ${analysis?.hasConflict ? 'text-[#b91c1c]' : 'text-gray-900'} mb-3 tracking-[0.02em] leading-tight`}>
+                  {analysis?.hasConflict ? 'DANGEROUS INTERACTION DETECTED' : 'YOUR MEDICATIONS ARE COMPATIBLE'}
+               </h1>
                <p className="text-gray-600 font-medium text-[0.9rem] md:text-[0.95rem] max-w-[650px] leading-relaxed">
-                  MedSafe AI has identified a severe contraindication between your current prescriptions. Immediate clinical intervention is advised.
+                  {analysis?.rationale}
                </p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-               {/* Left: Conflict Analysis - Improved for mobile */}
-               <div className="lg:col-span-8 bg-white border border-gray-100 shadow-sm rounded-[1.5rem] md:rounded-[2rem] p-6 md:p-8 relative overflow-hidden">
-                  <div className="absolute -top-6 -right-6 text-gray-50 pointer-events-none opacity-50">
-                     <span className="text-[140px] md:text-[200px] font-bold leading-none">!</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 mb-8 relative z-10">
-                     <svg className="w-[20px] md:w-[22px] h-[20px] md:h-[22px] text-[#b91c1c]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                     <h3 className="text-[1rem] md:text-[1.1rem] font-bold text-gray-900">Molecular Conflict Analysis</h3>
-                  </div>
-                  
-                  <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-4 relative z-10 py-4">
-                     {/* Drug 1 */}
-                     <div className="bg-[#F8FAFC] border border-gray-100 rounded-[1.2rem] md:rounded-[1.5rem] p-6 md:p-8 flex flex-col items-center w-full md:w-[260px] shadow-sm">
-                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#CCFBF1] flex items-center justify-center text-[#0F766E] mb-4 md:mb-5 shadow-sm">
-                           <PillIcon className="w-6 h-6 md:w-7 md:h-7 fill-current" />
-                        </div>
-                        <h4 className="text-[1.1rem] md:text-[1.2rem] font-bold text-gray-900 mb-2">Warfarin</h4>
-                        <span className="bg-[#0F766E] text-white text-[0.6rem] md:text-[0.65rem] font-bold px-3 py-1.5 rounded-md uppercase tracking-widest mb-3 text-center">ANTICOAGULANT</span>
-                        <p className="text-gray-500 font-medium text-[0.8rem] md:text-[0.85rem]">5mg Oral Tablet</p>
-                     </div>
-                     
-                     {/* Conflict Line / Icon */}
-                     <div className="relative flex items-center justify-center -my-2 md:my-0 md:-mx-4 z-10 shrink-0">
-                        <div className="hidden md:block absolute w-24 h-[1px] bg-gray-200 -z-10"></div>
-                        <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-[#b91c1c] text-white flex items-center justify-center border-4 border-white shadow-sm">
-                           <X className="w-5 h-5 md:w-[22px] md:h-[22px] stroke-[3]" />
-                        </div>
-                     </div>
-                     
-                     {/* Drug 2 */}
-                     <div className="bg-[#F8FAFC] border border-gray-100 rounded-[1.2rem] md:rounded-[1.5rem] p-6 md:p-8 flex flex-col items-center w-full md:w-[260px] shadow-sm">
-                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#E0E7FF] flex items-center justify-center text-[#4338ca] mb-4 md:mb-5 shadow-sm">
-                           <div className="font-bold text-[1.2rem] md:text-[1.4rem]">+</div>
-                        </div>
-                        <h4 className="text-[1.1rem] md:text-[1.2rem] font-bold text-gray-900 mb-2">Aspirin</h4>
-                        <span className="bg-[#E0E7FF] text-[#4338ca] text-[0.6rem] md:text-[0.65rem] font-bold px-3 py-1.5 rounded-md uppercase tracking-widest mb-3 text-center">NSAID / ANTIPLATELET</span>
-                        <p className="text-gray-500 font-medium text-[0.8rem] md:text-[0.85rem]">81mg Enteric Coated</p>
-                     </div>
-                  </div>
+               <div className="lg:col-span-8 bg-white border border-gray-100 shadow-sm rounded-[2rem] p-8 relative overflow-hidden">
+                  {!analysis?.hasConflict ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                       <div className="w-20 h-20 bg-[#F0FDFA] rounded-full flex items-center justify-center text-[#0F766E] mb-6">
+                          <ShieldCheck size={48} />
+                       </div>
+                       <h3 className="text-2xl font-bold text-gray-900 mb-2">No Conflicts Found</h3>
+                       <p className="text-gray-500 max-w-sm">Our AI analysis hasn't found any dangerous interactions between your current medications.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="absolute -top-6 -right-6 text-gray-50 pointer-events-none opacity-50">
+                         <span className="text-[200px] font-bold leading-none">!</span>
+                      </div>
+                      <div className="flex items-center gap-3 mb-8 relative z-10">
+                         <Activity className="w-6 h-6 text-[#b91c1c]" />
+                         <h3 className="text-[1.1rem] font-bold text-gray-900">Molecular Conflict Analysis</h3>
+                      </div>
+                      <div className="flex flex-col md:flex-row items-center justify-center gap-4 relative z-10 py-4">
+                         {medications.slice(0, 2).map((med, idx) => (
+                            <div key={med._id} className="flex flex-col md:flex-row items-center">
+                               <div className="bg-[#F8FAFC] border border-gray-100 rounded-[1.5rem] p-8 flex flex-col items-center w-[240px] shadow-sm">
+                                  <div className={`w-12 h-12 rounded-full ${idx === 0 ? 'bg-[#CCFBF1] text-[#0F766E]' : 'bg-[#E0E7FF] text-[#4338ca]'} flex items-center justify-center mb-4 shadow-sm`}>
+                                     <PillIcon className="w-6 h-6 fill-current" />
+                                  </div>
+                                  <h4 className="text-[1.1rem] font-bold text-gray-900 mb-2 text-center">{med.name}</h4>
+                                  <span className={`text-[0.6rem] font-bold px-3 py-1.5 rounded-md uppercase tracking-widest ${idx === 0 ? 'bg-[#CCFBF1] text-[#0F766E]' : 'bg-[#E0E7FF] text-[#4338ca]'}`}>
+                                    {med.category || "MEDICATION"}
+                                  </span>
+                               </div>
+                               {idx === 0 && (
+                                  <div className="relative flex items-center justify-center mx-4 z-10 shrink-0">
+                                     <div className="w-10 h-10 rounded-full bg-[#b91c1c] text-white flex items-center justify-center border-4 border-white shadow-sm">
+                                        <X className="w-5 h-5 stroke-[3]" />
+                                     </div>
+                                  </div>
+                               )}
+                            </div>
+                         ))}
+                      </div>
+                    </>
+                  )}
                </div>
 
-               {/* Right: Urgent Protocol */}
                <div className="lg:col-span-4 bg-[#0f172a] rounded-[2rem] p-8 shadow-xl text-white flex flex-col">
                   <div className="flex items-center gap-3 mb-6 text-white">
-                     <svg className="w-[20px] h-[20px] fill-current" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                     <AlertTriangle className="w-5 h-5" />
                      <h3 className="text-[1.1rem] font-bold">Urgent Protocol</h3>
                   </div>
-                  
                   <p className="text-blue-100 font-medium text-[0.95rem] leading-relaxed mb-8">
-                     To prevent internal bleeding or hemorrhage, follow these steps immediately:
+                     {analysis?.hasConflict ? "To prevent severe side effects, follow these steps immediately:" : "Your medication routine is verified for high safety."}
                   </p>
-                  
                   <div className="space-y-6 flex-1 mb-10">
-                     <div className="flex items-start gap-4">
-                        <div className="w-[22px] h-[22px] rounded-full bg-[#b91c1c] text-white flex items-center justify-center text-[0.75rem] font-bold shrink-0 mt-[2px] shadow-sm">1</div>
-                        <p className="text-white font-medium text-[0.95rem] leading-snug">Cease any new Aspirin doses immediately.</p>
-                     </div>
-                     <div className="flex items-start gap-4">
-                        <div className="w-[22px] h-[22px] rounded-full bg-slate-700 text-white flex items-center justify-center text-[0.75rem] font-bold shrink-0 mt-[2px]">2</div>
-                        <p className="text-white font-medium text-[0.95rem] leading-snug">Monitor for unusual bruising or bleeding gums.</p>
-                     </div>
+                     {analysis?.protocol ? analysis.protocol.map((step, i) => (
+                        <div key={i} className="flex items-start gap-4">
+                           <div className={`w-[22px] h-[22px] rounded-full ${i === 0 ? 'bg-[#b91c1c]' : 'bg-slate-700'} text-white flex items-center justify-center text-[0.75rem] font-bold shrink-0 mt-[2px]`}>{i+1}</div>
+                           <p className="text-white font-medium text-[0.95rem] leading-snug">{step}</p>
+                        </div>
+                     )) : (
+                        <div className="flex items-start gap-4">
+                           <div className="w-[22px] h-[22px] rounded-full bg-emerald-600 text-white flex items-center justify-center text-[0.75rem] font-bold shrink-0 mt-[2px]">✓</div>
+                           <p className="text-white font-medium text-[0.95rem] leading-snug">No urgent actions required.</p>
+                        </div>
+                     )}
                   </div>
-                  
                   <div className="space-y-3 mt-auto">
-                      <button 
-                        onClick={() => navigate("/medications")}
-                        className="w-full bg-[#0F766E] hover:bg-[#047857] text-white py-[0.8rem] rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-[0.95rem]"
-                      >
-                         <Calendar className="w-[18px] h-[18px] stroke-[2.5]" /> Adjust Dosage
+                      <button onClick={() => navigate("/medications")} className="w-full bg-[#0F766E] hover:bg-[#047857] text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm">
+                         <Calendar className="w-4 h-4" /> Adjust Dosage
                       </button>
-                     <button className="w-full bg-transparent border border-slate-700 hover:bg-slate-800 text-white py-[0.8rem] rounded-xl font-bold flex items-center justify-center gap-2 transition-colors text-[0.95rem]">
-                        <Phone className="w-[18px] h-[18px] stroke-[2.5]" /> Contact Doctor
+                     <button className="w-full bg-transparent border border-slate-700 hover:bg-slate-800 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
+                        <Phone className="w-4 h-4" /> Contact Doctor
                      </button>
                   </div>
                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-               {/* AI Rationale */}
                <div className="bg-white border border-gray-100 shadow-sm rounded-[2rem] p-8">
                   <div className="flex items-center gap-3 mb-6">
-                     <div className="w-10 h-10 rounded-xl bg-[#CCFBF1] flex items-center justify-center text-[#0F766E]">
-                        <BrainCog className="w-[1.15rem] h-[1.15rem]" strokeWidth={2.5} />
-                     </div>
-                     <div>
-                        <h3 className="text-[1.05rem] font-bold text-gray-900 leading-tight">AI Rationale</h3>
-                        <p className="text-gray-900 text-[0.7rem] font-bold uppercase tracking-widest mt-0.5">Deep Learning Pharmacological Model v4.2</p>
-                     </div>
+                     <BrainCog className="w-6 h-6 text-[#0F766E]" />
+                     <h3 className="text-[1.05rem] font-bold text-gray-900">AI Rationale</h3>
                   </div>
-                  
                   <p className="text-gray-900 font-medium text-[0.95rem] leading-relaxed mb-6">
-                     The combination of <span className="text-[#b91c1c] font-bold">Warfarin</span> and <span className="text-[#b91c1c] font-bold">Aspirin</span> creates a potent <span className="underline decoration-dashed decoration-gray-400 underline-offset-4">synergistic effect</span> on the coagulation cascade.
+                     {analysis?.rationale || "Safety analysis complete."}
                   </p>
-                  
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                     <div className="bg-[#F8FAFC] p-4 rounded-xl border border-gray-100">
-                        <span className="text-[#0F766E] text-[0.65rem] font-bold uppercase tracking-widest mb-2 block">MECHANISM A</span>
-                        <p className="text-gray-700 text-[0.8rem] font-medium leading-relaxed">Warfarin inhibits vitamin K-dependent clotting factors (II, VII, IX, X).</p>
-                     </div>
-                     <div className="bg-[#F8FAFC] p-4 rounded-xl border border-gray-100">
-                        <span className="text-gray-500 text-[0.65rem] font-bold uppercase tracking-widest mb-2 block">MECHANISM B</span>
-                        <p className="text-gray-700 text-[0.8rem] font-medium leading-relaxed">Aspirin irreversibly inhibits COX-1, preventing platelet aggregation.</p>
-                     </div>
-                  </div>
-                  
-                  <div className="border-l-4 border-gray-300 pl-5 py-1">
-                     <p className="text-gray-600 font-medium text-[0.9rem] leading-relaxed">&quot;Concomitant use significantly increases the risk of major gastrointestinal bleeding and intracranial hemorrhage by approximately 2.5x compared to monotherapy.&quot;</p>
-                  </div>
                </div>
 
-               {/* Clinical Evidence */}
                <div className="bg-white border border-gray-100 shadow-sm rounded-[2rem] p-8 flex flex-col">
                   <div className="flex items-center gap-3 mb-6">
-                     <FileText className="w-5 h-5 text-gray-400 stroke-[2.5]" />
+                     <FileText className="w-5 h-5 text-gray-400" />
                      <h3 className="text-[1.05rem] font-bold text-gray-900">Clinical Evidence</h3>
                   </div>
-                  
                   <div className="space-y-4 flex-1">
-                     <div className="bg-[#F8FAFC] p-6 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors cursor-pointer group relative">
-                        <span className="text-[#0F766E] text-[0.7rem] font-bold uppercase tracking-widest mb-1.5 block">NEJM STUDY 2023</span>
-                        <h4 className="font-bold text-gray-900 text-[0.95rem] mb-1.5 pr-6 leading-tight">Bleeding Risks in Combined Antithrombotic Therapy</h4>
-                        <p className="text-gray-500 text-[0.8rem] font-medium">Journal of American Cardiology, Vol 78, Issue 12</p>
+                     <div className="bg-[#F8FAFC] p-6 rounded-xl border border-gray-100 group relative cursor-pointer">
+                        <span className="text-[#0F766E] text-[0.7rem] font-bold uppercase tracking-widest mb-1 block">NEJM STUDY 2023</span>
+                        <h4 className="font-bold text-gray-900 text-[0.95rem] mb-1">Bleeding Risks in Combined Antithrombotic Therapy</h4>
                         <ExternalLink className="absolute top-6 right-6 w-4 h-4 text-gray-400 group-hover:text-gray-900 transition-colors" />
                      </div>
-                     
-                     <div className="bg-[#F8FAFC] p-6 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors cursor-pointer group relative">
-                        <span className="text-[#0F766E] text-[0.7rem] font-bold uppercase tracking-widest mb-1.5 block">FDA SAFETY ALERT</span>
-                        <h4 className="font-bold text-gray-900 text-[0.95rem] mb-1.5 pr-6 leading-tight">Boxed Warning: Warfarin Sodium and Salicylates</h4>
-                        <p className="text-gray-500 text-[0.8rem] font-medium">Updated Clinical Guidelines Section 4.2.1</p>
-                        <ExternalLink className="absolute top-6 right-6 w-4 h-4 text-gray-400 group-hover:text-gray-900 transition-colors" />
-                     </div>
-                  </div>
-                  
-                  <div className="mt-6 pt-6 border-t border-gray-100 flex items-center gap-2 text-gray-600 text-[0.85rem] font-bold">
-                     <CheckCircle2 className="w-[18px] h-[18px]" /> Verified by MedSafe Clinical Board
                   </div>
                </div>
             </div>
             
-            <div className="mt-10 text-center space-y-1">
-               <p className="text-gray-400 text-[0.75rem] font-medium">ID: AR-90823-X | Time Generated: 14:02:11 GMT+0 | AI Model Confidence: 99.8%</p>
-               <p className="text-gray-400 text-[0.75rem] font-medium">This analysis is for professional guidance only and does not substitute for medical advice.</p>
+            <div className="mt-10 text-center">
+               <p className="text-gray-400 text-[0.75rem] font-medium">ID: AR-{user?.uid?.slice(0, 5)} | Generated: {new Date().toLocaleString()}</p>
             </div>
          </div>
       </main>

@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper to check if document belongs to user
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      // Users can read/write their own profile
+      allow read, write: if isAuthenticated() && isOwner(userId);
+      
+      // PUBLIC ACCESS: Allow read of specific public profile fields for emergency responders
+      // In a real app, you might want to restrict this further
+      allow read: if true; 
+    }
+
+    // --- Medicines Collection ---
+    match /medicines/{docId} {
+      allow read, write: if isAuthenticated() && isOwner(request.resource.data.userId || resource.data.userId);
+    }
+
+    // --- Vitals Collection ---
+    match /vitals/{docId} {
+      allow read, write: if isAuthenticated() && isOwner(request.resource.data.userId || resource.data.userId);
+    }
+
+    // --- Medication Logs Collection ---
+    match /medication_logs/{docId} {
+      allow read, write: if isAuthenticated() && isOwner(request.resource.data.userId || resource.data.userId);
+    }
+
+    // --- SOS Events Collection ---
+    match /sos_events/{docId} {
+      allow read, write: if isAuthenticated() && isOwner(request.resource.data.userId || resource.data.userId);
+    }
+
+    // --- Chats Collection ---
+    match /chats/{docId} {
+      allow read, write: if isAuthenticated() && isOwner(request.resource.data.userId || resource.data.userId);
+    }
+  }
+}

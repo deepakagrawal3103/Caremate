@@ -1,74 +1,93 @@
 import { createContext, useState, useEffect, useCallback, useContext } from "react";
-import api from "../services/api";
+import { 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut,
+  updateProfile 
+} from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { auth, db } from "../services/firebase";
 import toast from "react-hot-toast";
 
 export const AuthContext = createContext(null);
 
-
-
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem("token"));
 
-  // Set axios default header when token changes
-  useEffect(() => {
-    if (token) {
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      localStorage.setItem("token", token);
-    } else {
-      delete api.defaults.headers.common["Authorization"];
-      localStorage.removeItem("token");
-    }
-  }, [token]);
-
-  // Fetch current user on mount or token change
-  const fetchUser = useCallback(async () => {
-    if (!token) {
+  // Sync user with Firestore data
+  const syncUserWithProfile = useCallback(async (firebaseUser) => {
+    if (!firebaseUser) {
       setUser(null);
       setLoading(false);
       return;
     }
+
     try {
-      const { data } = await api.get("/auth/me");
-      setUser(data.user);
+      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+      if (userDoc.exists()) {
+        setUser({ ...firebaseUser, ...userDoc.data() });
+      } else {
+        // Fallback to basic auth user if doc doesn't exist
+        setUser(firebaseUser);
+      }
     } catch (error) {
-      console.error("Failed to fetch user:", error);
-      setToken(null);
-      setUser(null);
+      console.error("Error fetching user profile:", error);
+      setUser(firebaseUser);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      syncUserWithProfile(firebaseUser);
+    });
+
+    return () => unsubscribe();
+  }, [syncUserWithProfile]);
 
   const login = async (email, password) => {
     try {
-      const { data } = await api.post("/auth/login", { email, password });
-      setToken(data.token);
-      setUser(data.user);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       toast.success("Logged in successfully!");
-      return data;
+      return userCredential.user;
     } catch (error) {
-      const message = error.response?.data?.message || "Login failed";
+      const message = error.code || "Login failed";
       toast.error(message);
       throw error;
     }
   };
 
   const register = async (userData) => {
+    const { email, password, name, ...profileData } = userData;
     try {
-      const { data } = await api.post("/auth/register", userData);
-      setToken(data.token);
-      setUser(data.user);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Update basic profile
+      await updateProfile(userCredential.user, { displayName: name });
+
+      // Create user document in Firestore
+      await setDoc(doc(db, "users", userCredential.user.uid), {
+        name,
+        email,
+        createdAt: new Date().toISOString(),
+        ...profileData
+      });
+
       toast.success("Account created successfully!");
-      return data;
+      return userCredential.user;
     } catch (error) {
-      const message = error.response?.data?.message || "Registration failed";
+      const message = error.code || "Registration failed";
       toast.error(message);
       throw error;
     }
@@ -76,28 +95,33 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await api.post("/auth/logout");
-    } catch (error) {
-      console.error("Logout API error:", error);
-    } finally {
-      setToken(null);
-      setUser(null);
+      await signOut(auth);
       toast.success("Logged out");
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Failed to logout");
     }
   };
 
-  const updateUser = (updatedUser) => {
-    setUser(updatedUser);
+  const updateUserProfile = async (updatedData) => {
+    if (!auth.currentUser) return;
+    try {
+      await setDoc(doc(db, "users", auth.currentUser.uid), updatedData, { merge: true });
+      setUser(prev => ({ ...prev, ...updatedData }));
+      toast.success("Profile updated");
+    } catch (error) {
+      toast.error("Failed to update profile");
+      throw error;
+    }
   };
 
   const value = {
     user,
     loading,
-    token,
     login,
     register,
     logout,
-    updateUser,
+    updateUser: updateUserProfile,
     isAuthenticated: !!user,
   };
 
