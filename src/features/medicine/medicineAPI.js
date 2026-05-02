@@ -87,16 +87,23 @@ export const medicineAPI = {
     // 1. Get the medicine being checked
     const { data: { medicine } } = await medicineAPI.getMedicine(medicineId);
     
-    // 2. Get all other medicines
+    // 2. Get all other medicines and user profile
     const { data: { medicines } } = await medicineAPI.getAllMedicines();
     const otherMeds = medicines.filter(m => m._id !== medicineId);
     
-    if (otherMeds.length === 0) return { data: { status: "safe", interactions: [] } };
-
+    const userDoc = await getDoc(doc(db, "users", userId));
+    const userData = userDoc.exists() ? userDoc.data() : {};
+    const chronicConditions = userData.diseases || [];
+    
     // 3. AI Analysis
     const medList = otherMeds.map(m => m.name).join(", ");
-    const prompt = `Check for drug-drug interactions between "${medicine.name}" and this list: [${medList}].
-    Return JSON: { "status": "safe"|"warning"|"danger", "interactions": [ { "drug": string, "severity": string, "effect": string } ] }`;
+    const diseaseList = chronicConditions.join(", ");
+    const prompt = `Check for drug-drug and drug-condition interactions for "${medicine.name}".
+    Context:
+    - Other Medications: [${medList}]
+    - Chronic Conditions: [${diseaseList}]
+    
+    Return JSON: { "status": "safe"|"warning"|"danger", "interactions": [ { "type": "medication"|"condition", "target": string, "severity": string, "effect": string } ] }`;
 
     const response = await aiService.askAI(prompt, "You are a clinical pharmacist. Return ONLY JSON.");
     try {
@@ -106,7 +113,8 @@ export const medicineAPI = {
       // Update the medicine doc with interaction status
       await updateDoc(doc(db, "medicines", medicineId), {
         interactionStatus: interactionData.status,
-        interactions: interactionData.interactions
+        interactions: interactionData.interactions,
+        aiAnalysisDate: new Date().toISOString()
       });
 
       return { data: interactionData };

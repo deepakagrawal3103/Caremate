@@ -24,7 +24,8 @@ import {
   AlertCircle,
   Zap,
   Upload,
-  Camera as CameraIcon
+  Camera as CameraIcon,
+  ShieldCheck
 } from "lucide-react";
 
 export default function AddMedicine() {
@@ -32,6 +33,7 @@ export default function AddMedicine() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -116,19 +118,17 @@ export default function AddMedicine() {
           category: formData.form // Using form as category if not specified
         });
 
-        // Trigger AI Interaction Check in background
-        toast.promise(
-          medicineAPI.checkInteraction(res.data.medicine._id),
-           {
-             loading: 'Analyzing drug interactions...',
-             success: (data) => {
-               if (data.data.status === 'danger') return "⚠️ CRITICAL: Interaction detected!";
-               if (data.data.status === 'warning') return "⚡ Caution: Minor interaction noted.";
-               return "✅ Safety check passed!";
-             },
-             error: 'Safety check failed.',
-           }
-        );
+        // Trigger AI Interaction Check
+        const analysis = await medicineAPI.checkInteraction(res.data.medicine._id);
+        setAnalysisResult(analysis.data);
+        
+        if (analysis.data.status === 'danger') {
+          toast.error("CRITICAL: Harmful interaction detected!");
+        } else if (analysis.data.status === 'warning') {
+          toast.success("Medicine added with safety warnings.");
+        } else {
+          toast.success("Medicine added and safety verified!");
+        }
 
         setStep(6);
       } catch (error) {
@@ -257,13 +257,21 @@ export default function AddMedicine() {
                 className="w-full h-24 bg-[#F8FAFC] border-none rounded-2xl p-4 text-[0.9rem] font-medium focus:ring-2 focus:ring-[#0F766E]/20"
               ></textarea>
 
-              <button 
-                onClick={() => handleScan(document.getElementById('labelInput').value)}
-                disabled={loading}
-                className="w-full bg-[#0F4D4A] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-[#0F4D4A]/10 transition-all active:scale-95 disabled:opacity-50"
-              >
-                {loading ? "Analyzing..." : "Analyze Text"}
-              </button>
+              <div className="flex gap-4">
+                <button 
+                  onClick={prevStep}
+                  className="flex-1 bg-white border border-gray-100 text-gray-400 py-4 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-95"
+                >
+                  Back
+                </button>
+                <button 
+                  onClick={() => handleScan(document.getElementById('labelInput').value)}
+                  disabled={loading}
+                  className="flex-[2] bg-[#0F4D4A] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-[#0F4D4A]/10 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {loading ? "Analyzing..." : "Analyze Text"}
+                </button>
+              </div>
             </div>
 
             <p className="text-center text-[0.85rem] font-bold text-gray-400 uppercase tracking-widest">
@@ -291,25 +299,14 @@ export default function AddMedicine() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                   <div className="space-y-2">
-                      <label className="text-[0.7rem] font-black text-[#0F4D4A] uppercase tracking-widest ml-1">Strength</label>
-                      <input 
-                        type="text" 
-                        value={formData.strength}
-                        className="w-full bg-[#F8FAFC] border-2 border-transparent rounded-2xl p-4 font-bold text-[#0F4D4A] outline-none"
-                        readOnly
-                      />
-                   </div>
-                   <div className="space-y-2">
-                      <label className="text-[0.7rem] font-black text-[#0F4D4A] uppercase tracking-widest ml-1">Form</label>
-                      <input 
-                        type="text" 
-                        value={formData.form}
-                        className="w-full bg-[#F8FAFC] border-2 border-transparent rounded-2xl p-4 font-bold text-[#0F4D4A] outline-none"
-                        readOnly
-                      />
-                   </div>
+                <div className="space-y-2">
+                  <label className="text-[0.7rem] font-black text-[#0F4D4A] uppercase tracking-widest ml-1">Form</label>
+                  <input 
+                    type="text" 
+                    value={formData.form}
+                    className="w-full bg-[#F8FAFC] border-2 border-transparent rounded-2xl p-4 font-bold text-[#0F4D4A] outline-none"
+                    readOnly
+                  />
                 </div>
               </div>
             </div>
@@ -323,12 +320,20 @@ export default function AddMedicine() {
               </p>
             </div>
 
-            <button
-              onClick={nextStep}
-              className="w-full bg-[#0F4D4A] text-white py-5 rounded-full font-black text-[1.1rem] flex items-center justify-center gap-3 shadow-xl shadow-[#0F4D4A]/20 active:scale-95 transition-all"
-            >
-              Set Schedule <ArrowRight size={20} />
-            </button>
+            <div className="flex gap-4">
+              <button
+                onClick={prevStep}
+                className="px-8 bg-white border border-gray-100 text-gray-400 py-5 rounded-full font-black text-[1.1rem] active:scale-95 transition-all"
+              >
+                Back
+              </button>
+              <button
+                onClick={nextStep}
+                className="flex-1 bg-[#0F4D4A] text-white py-5 rounded-full font-black text-[1.1rem] flex items-center justify-center gap-3 shadow-xl shadow-[#0F4D4A]/20 active:scale-95 transition-all"
+              >
+                Set Schedule <ArrowRight size={20} />
+              </button>
+            </div>
           </div>
         )}
 
@@ -390,24 +395,123 @@ export default function AddMedicine() {
             </section>
 
             <section>
-               <h4 className="text-[0.75rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Treatment Duration</h4>
+               <h4 className="text-[0.75rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Stock Inventory</h4>
                <div className="bg-white rounded-[2rem] p-6 border border-gray-100 flex items-center justify-between shadow-sm">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-[#F8FAFC] flex items-center justify-center text-[#0F4D4A]">
-                       <Calendar size={20} />
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                       <Pill size={20} />
                     </div>
-                    <span className="font-bold text-[#0F4D4A]">7 Days Course</span>
+                    <div className="flex items-center gap-3">
+                      <button 
+                        onClick={() => {
+                          const newInv = Math.max(0, formData.inventory - 1);
+                          const dosesPerDay = formData.schedule.length * formData.dosageValue;
+                          const newDuration = dosesPerDay > 0 ? Math.ceil(newInv / dosesPerDay) : 0;
+                          setFormData({...formData, inventory: newInv, duration: `${newDuration} Days`});
+                        }}
+                        className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 active:bg-gray-100"
+                      >
+                        <Minus size={16} />
+                      </button>
+                      <div className="flex items-center gap-1 bg-[#F8FAFC] px-3 py-1 rounded-xl border border-gray-100">
+                        <input 
+                          type="text" 
+                          value={formData.inventory}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, '');
+                            const numVal = parseInt(val) || 0;
+                            const dosesPerDay = formData.schedule.length * formData.dosageValue;
+                            const newDuration = dosesPerDay > 0 ? Math.ceil(numVal / dosesPerDay) : 0;
+                            setFormData({...formData, inventory: numVal, duration: `${newDuration} Days`});
+                          }}
+                          className="w-12 bg-transparent border-none text-center font-black text-[#0F4D4A] p-0 focus:ring-0"
+                        />
+                        <span className="font-bold text-[#0F4D4A] text-[0.9rem]">Tablets</span>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          const newInv = formData.inventory + 1;
+                          const dosesPerDay = formData.schedule.length * formData.dosageValue;
+                          const newDuration = dosesPerDay > 0 ? Math.ceil(newInv / dosesPerDay) : 0;
+                          setFormData({...formData, inventory: newInv, duration: `${newDuration} Days`});
+                        }}
+                        className="w-8 h-8 rounded-lg bg-[#0F4D4A] flex items-center justify-center text-white"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
                   </div>
-                  <ChevronRight size={20} className="text-gray-300" />
+                  <div className="text-right">
+                    <p className="text-[0.6rem] font-black text-gray-400 uppercase tracking-widest">Total Stock</p>
+                  </div>
                </div>
             </section>
 
-            <button
-              onClick={nextStep}
-              className="w-full bg-[#0F4D4A] text-white py-5 rounded-full font-black text-[1.1rem] flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all"
-            >
-              Review Order <ArrowRight size={20} />
-            </button>
+            <section>
+               <h4 className="text-[0.75rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Treatment Duration (Calculated)</h4>
+               <div className="bg-[#F0FDFA] rounded-[2rem] p-6 border border-[#CCFBF1] flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#0F766E]">
+                       <Calendar size={20} />
+                    </div>
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => {
+                            const val = parseInt(formData.duration) || 1;
+                            const newVal = Math.max(1, val - 1);
+                            setFormData({...formData, duration: `${newVal} Days`, inventory: newVal * formData.schedule.length * formData.dosageValue});
+                          }}
+                          className="w-8 h-8 rounded-lg bg-white/50 text-[#0F766E] flex items-center justify-center"
+                        >
+                          <Minus size={16} />
+                        </button>
+                        
+                        <div className="flex items-center gap-1 bg-white/40 px-3 py-1 rounded-xl border border-[#0F766E]/10">
+                          <input 
+                            type="text" 
+                            value={formData.duration.split(' ')[0]}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9]/g, '');
+                              const numVal = parseInt(val) || 0;
+                              setFormData({...formData, duration: `${val} Days`, inventory: numVal * formData.schedule.length * formData.dosageValue});
+                            }}
+                            className="w-12 bg-transparent border-none text-center font-black text-[#0F766E] p-0 focus:ring-0"
+                          />
+                          <span className="font-bold text-[#0F766E] text-[1.1rem]">Days</span>
+                        </div>
+
+                        <button 
+                          onClick={() => {
+                            const val = parseInt(formData.duration) || 1;
+                            const newVal = val + 1;
+                            setFormData({...formData, duration: `${newVal} Days`, inventory: newVal * formData.schedule.length * formData.dosageValue});
+                          }}
+                          className="w-8 h-8 rounded-lg bg-[#0F766E] text-white flex items-center justify-center"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                      <p className="text-[0.7rem] text-[#0F766E]/60 font-bold uppercase tracking-tight mt-1 ml-1">Manual adjustment active</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+            <div className="flex gap-4">
+              <button
+                onClick={prevStep}
+                className="px-8 bg-white border border-gray-100 text-gray-400 py-5 rounded-full font-black text-[1.1rem] active:scale-95 transition-all"
+              >
+                Back
+              </button>
+              <button
+                onClick={nextStep}
+                className="flex-1 bg-[#0F4D4A] text-white py-5 rounded-full font-black text-[1.1rem] flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all"
+              >
+                <span>Review</span> <ArrowRight size={20} />
+              </button>
+            </div>
           </div>
         )}
 
@@ -454,12 +558,20 @@ export default function AddMedicine() {
                 </div>
              </div>
 
-             <button
-               onClick={nextStep}
-               className="w-full bg-[#0F4D4A] text-white py-5 rounded-full font-black text-[1.2rem] shadow-2xl active:scale-95 transition-all"
-             >
-               Confirm & Add
-             </button>
+            <div className="flex gap-4">
+              <button
+                onClick={prevStep}
+                className="px-8 bg-white border border-gray-100 text-gray-400 py-5 rounded-full font-black text-[1.1rem] active:scale-95 transition-all"
+              >
+                Back
+              </button>
+              <button
+                onClick={nextStep}
+                className="flex-1 bg-[#0F4D4A] text-white py-5 rounded-full font-black text-[1.2rem] shadow-2xl active:scale-95 transition-all"
+              >
+                Confirm & Add
+              </button>
+            </div>
           </div>
         )}
 
@@ -479,6 +591,25 @@ export default function AddMedicine() {
                 <span className="font-bold text-[#0F4D4A]">{formData.name}</span> has been successfully integrated into your care plan.
               </p>
             </div>
+
+            {analysisResult && (
+              <div className={`w-full p-6 rounded-3xl border-2 transition-all animate-in fade-in slide-in-from-top-4 duration-1000 delay-300 ${
+                analysisResult.status === 'danger' ? 'bg-red-50 border-red-100 text-red-900' :
+                analysisResult.status === 'warning' ? 'bg-amber-50 border-amber-100 text-amber-900' :
+                'bg-emerald-50 border-emerald-100 text-emerald-900'
+              }`}>
+                <div className="flex items-center gap-3 mb-3 justify-center">
+                   <ShieldCheck className={analysisResult.status === 'danger' ? 'text-red-600' : analysisResult.status === 'warning' ? 'text-amber-600' : 'text-emerald-600'} />
+                   <h4 className="text-[0.9rem] font-black uppercase tracking-widest">AI Safety Result: {analysisResult.status}</h4>
+                </div>
+                <p className="text-[0.85rem] font-medium leading-relaxed">
+                  {analysisResult.interactions?.[0]?.effect || "No harmful interactions detected with your current health profile."}
+                </p>
+                {analysisResult.status !== 'safe' && (
+                   <p className="mt-3 text-[0.7rem] font-black uppercase text-red-600 bg-white/50 py-1 rounded-full">Check dashboard for detailed clinical alerts</p>
+                )}
+              </div>
+            )}
 
             <div className="w-full space-y-4 pt-6">
               <button

@@ -15,6 +15,74 @@ import {
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
+const COMMON_DISEASES = [
+  // Cardiovascular
+  "Hypertension (High Blood Pressure)",
+  "High Cholesterol (Hyperlipidemia)",
+  "Heart Disease (CAD)",
+  "Congestive Heart Failure (CHF)",
+  "Atrial Fibrillation (Afib)",
+  "Post-Stroke Recovery",
+  
+  // Metabolic & Endocrine
+  "Type 2 Diabetes (High Sugar)",
+  "Type 1 Diabetes",
+  "Hypothyroidism",
+  "Hyperthyroidism",
+  "PCOS",
+  "Vitamin D Deficiency",
+  "Iron Deficiency (Anemia)",
+  
+  // Respiratory
+  "Asthma",
+  "COPD (Chronic Lung Disease)",
+  "Sleep Apnea",
+  "Seasonal Allergies",
+  "Sinusitis",
+  
+  // Digestive
+  "GERD (Acid Reflux)",
+  "Gastritis",
+  "Irritable Bowel Syndrome (IBS)",
+  "Crohn's Disease",
+  "Ulcerative Colitis",
+  "Fatty Liver Disease",
+  
+  // Neurological & Mental Health
+  "Migraine",
+  "Epilepsy (Seizures)",
+  "Alzheimer's / Dementia",
+  "Parkinson's Disease",
+  "Multiple Sclerosis (MS)",
+  "Depression",
+  "Anxiety Disorder",
+  "Insomnia",
+  "Bipolar Disorder",
+  "PTSD",
+  
+  // Musculoskeletal & Others
+  "Arthritis (Osteo/Rheumatoid)",
+  "Osteoporosis",
+  "Chronic Kidney Disease (CKD)",
+  "Psoriasis",
+  "Eczema",
+  "Cancer (Active/Remission)",
+  "HIV / AIDS"
+];
+
+const COMMON_ALLERGIES = [
+  "Penicillin",
+  "Peanuts",
+  "Pollen",
+  "Dust Mites",
+  "Latex",
+  "Shellfish",
+  "Milk / Dairy",
+  "Egg",
+  "Soy",
+  "Wheat"
+];
+
 export default function Profile() {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
@@ -28,8 +96,14 @@ export default function Profile() {
     age: '',
     emergencyContactName: '',
     emergencyContactPhone: '',
-    photoURL: ''
+    photoURL: '',
+    diseases: [],
+    allergies: []
   });
+  const [currentDisease, setCurrentDisease] = useState("");
+  const [currentAllergy, setCurrentAllergy] = useState("");
+  const [diseaseSuggestions, setDiseaseSuggestions] = useState([]);
+  const [allergySuggestions, setAllergySuggestions] = useState([]);
 
   useEffect(() => {
     if (user) {
@@ -42,7 +116,9 @@ export default function Profile() {
         age: user.age || '',
         emergencyContactName: user.emergencyContactName || '',
         emergencyContactPhone: user.emergencyContactPhone || '',
-        photoURL: user.photoURL || ''
+        photoURL: user.photoURL || '',
+        diseases: user.diseases || [],
+        allergies: user.allergies || []
       });
     }
   }, [user]);
@@ -156,19 +232,30 @@ export default function Profile() {
                   </div>
                 </div>
               </div>
-
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[0.8rem] font-bold text-gray-400 uppercase tracking-wider mb-2">Blood</label>
                   <div className="relative">
-                    <Droplets className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                    <input 
-                      type="text" 
+                    <Droplets className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                    <select 
                       value={formData.bloodGroup}
                       onChange={(e) => setFormData({...formData, bloodGroup: e.target.value})}
-                      className="w-full bg-[#F8FAFC] border-none rounded-2xl py-4 pl-11 pr-3 font-bold text-gray-900 focus:ring-2 focus:ring-[#0F766E]/20"
-                      placeholder="B+"
-                    />
+                      className="w-full bg-[#F8FAFC] border-none rounded-2xl py-4 pl-11 pr-8 font-bold text-gray-900 focus:ring-2 focus:ring-[#0F766E]/20 appearance-none cursor-pointer"
+                    >
+                      <option value="">Select</option>
+                      <option value="A+">A+</option>
+                      <option value="A-">A-</option>
+                      <option value="B+">B+</option>
+                      <option value="B-">B-</option>
+                      <option value="O+">O+</option>
+                      <option value="O-">O-</option>
+                      <option value="AB+">AB+</option>
+                      <option value="AB-">AB-</option>
+                      <option value="Don't Know">Don't Know</option>
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                      <ChevronLeft size={16} className="-rotate-90" />
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -197,6 +284,128 @@ export default function Profile() {
                     />
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-gray-50 space-y-4">
+              <p className="text-[0.7rem] font-black text-[#0F4D4A] uppercase tracking-widest">Chronic Conditions</p>
+              <div className="relative">
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={currentDisease}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCurrentDisease(val);
+                      if (val.trim()) {
+                        setDiseaseSuggestions(COMMON_DISEASES.filter(d => d.toLowerCase().includes(val.toLowerCase())));
+                      } else {
+                        setDiseaseSuggestions([]);
+                      }
+                    }}
+                    className="flex-1 bg-[#F8FAFC] border-none rounded-2xl py-3 px-4 font-bold text-gray-900 focus:ring-2 focus:ring-[#0F766E]/20 text-[0.9rem]"
+                    placeholder="e.g. Hypertension"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      if (currentDisease.trim()) {
+                        setFormData({...formData, diseases: [...formData.diseases, currentDisease.trim()]});
+                        setCurrentDisease("");
+                        setDiseaseSuggestions([]);
+                      }
+                    }}
+                    className="bg-[#0F766E] text-white px-4 rounded-2xl font-bold text-[0.8rem]"
+                  >Add</button>
+                </div>
+                
+                {diseaseSuggestions.length > 0 && (
+                  <div className="absolute z-20 left-0 right-0 top-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+                    {diseaseSuggestions.map((suggestion, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          setFormData({...formData, diseases: [...formData.diseases, suggestion]});
+                          setCurrentDisease("");
+                          setDiseaseSuggestions([]);
+                        }}
+                        className="w-full text-left px-5 py-3 text-[0.85rem] font-bold text-gray-700 hover:bg-[#F0FDFA] hover:text-[#0F766E] transition-colors border-b border-gray-50 last:border-none"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {formData.diseases.map((d, i) => (
+                  <span key={i} className="bg-red-50 text-red-600 px-3 py-1.5 rounded-xl text-[0.7rem] font-black uppercase flex items-center gap-2 border border-red-100">
+                    {d}
+                    <button type="button" onClick={() => setFormData({...formData, diseases: formData.diseases.filter((_, idx) => idx !== i)})}><X size={12} /></button>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-gray-50 space-y-4">
+              <p className="text-[0.7rem] font-black text-red-700 uppercase tracking-widest">Allergies</p>
+              <div className="relative">
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={currentAllergy}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCurrentAllergy(val);
+                      if (val.trim()) {
+                        setAllergySuggestions(COMMON_ALLERGIES.filter(a => a.toLowerCase().includes(val.toLowerCase())));
+                      } else {
+                        setAllergySuggestions([]);
+                      }
+                    }}
+                    className="flex-1 bg-[#F8FAFC] border-none rounded-2xl py-3 px-4 font-bold text-gray-900 focus:ring-2 focus:ring-[#0F766E]/20 text-[0.9rem]"
+                    placeholder="e.g. Penicillin"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      if (currentAllergy.trim()) {
+                        setFormData({...formData, allergies: [...formData.allergies, currentAllergy.trim()]});
+                        setCurrentAllergy("");
+                        setAllergySuggestions([]);
+                      }
+                    }}
+                    className="bg-red-600 text-white px-4 rounded-2xl font-bold text-[0.8rem]"
+                  >Add</button>
+                </div>
+
+                {allergySuggestions.length > 0 && (
+                  <div className="absolute z-20 left-0 right-0 top-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+                    {allergySuggestions.map((suggestion, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          setFormData({...formData, allergies: [...formData.allergies, suggestion]});
+                          setCurrentAllergy("");
+                          setAllergySuggestions([]);
+                        }}
+                        className="w-full text-left px-5 py-3 text-[0.85rem] font-bold text-gray-700 hover:bg-red-50 hover:text-red-700 transition-colors border-b border-gray-50 last:border-none"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {formData.allergies.map((a, i) => (
+                  <span key={i} className="bg-red-100 text-red-800 px-3 py-1.5 rounded-xl text-[0.7rem] font-black uppercase flex items-center gap-2 border border-red-200">
+                    {a}
+                    <button type="button" onClick={() => setFormData({...formData, allergies: formData.allergies.filter((_, idx) => idx !== i)})}><X size={12} /></button>
+                  </span>
+                ))}
               </div>
             </div>
             <div className="pt-6 border-t border-gray-50 space-y-4">

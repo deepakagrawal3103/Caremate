@@ -107,7 +107,7 @@ export default function MedicationHistory() {
               className="w-full bg-[#F1F5F9] border-none rounded-lg py-2 pl-10 pr-4 text-[0.9rem] focus:ring-2 focus:ring-[#0F766E]/20"
             />
           </div>
-          <Link to="/notifications" className="text-gray-400 hover:text-gray-900 p-1"><Bell size={20} /></Link>
+          <Link to="/alerts" className="text-gray-400 hover:text-gray-900 p-1"><Bell size={20} /></Link>
           <Link to="/settings" className="text-gray-400 hover:text-gray-900 p-1"><Settings size={20} /></Link>
           <Link to="/profile" className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 shrink-0 hover:opacity-80 transition-opacity">
              <img src={user?.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} alt="User" className="w-full h-full object-cover" />

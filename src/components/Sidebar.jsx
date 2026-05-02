@@ -33,14 +33,8 @@ export default function Sidebar({ onClose }) {
     { label: "Dashboard", path: "/", icon: <LayoutDashboard size={18} strokeWidth={2.5} /> },
     { label: "Add Medicine", path: "/add-medicine", icon: <Plus size={18} strokeWidth={2.5} /> },
     { label: "Patient Records", path: "/patient-records", icon: <User size={18} strokeWidth={2.5} /> },
-    { label: "Medicine Tracker", path: "/medications", icon: <Pill size={18} strokeWidth={2.5} /> },
-    { label: "AI Risk Analysis", path: "/risk-analysis", icon: <BrainCog size={18} strokeWidth={2.5} /> },
     { label: "MedSafe AI Chat", path: "/chatbot", icon: <MessageSquare size={18} strokeWidth={2.5} /> },
-    { label: "Health Resume", path: "/health-resume", icon: <FileText size={18} strokeWidth={2.5} /> },
-    { label: "Notifications", path: "/notifications", icon: <Bell size={18} strokeWidth={2.5} /> },
     { label: "Alerts & Reminders", path: "/alerts", icon: <AlarmClock size={18} strokeWidth={2.5} /> },
-    { label: "Adherence History", path: "/medication-history", icon: <History size={18} strokeWidth={2.5} /> },
-    { label: "Emergency QR", path: "/qr", icon: <QrCode size={18} strokeWidth={2.5} /> },
   ];
 
   return (
