@@ -3,9 +3,10 @@ import { useMobileMenu } from "../context/MobileMenuContext";
 import { medicineAPI } from "../features/medicine/medicineAPI";
 import { vitalsAPI } from "../features/vitals/vitalsAPI";
 import { medicationLogsAPI } from "../features/medicine/medicationLogsAPI";
+import { aiService, AI_MODELS } from "../services/ai";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bell, Settings, Search, Plus, ShieldCheck, Clock, Pill, Activity, Heart, Wind, Edit2, Menu, AlertTriangle, Calendar, Check } from "lucide-react";
+import { Bell, Settings, Search, Plus, ShieldCheck, Clock, Pill, Activity, Heart, Wind, Edit2, Menu, AlertTriangle, Calendar, Check, CheckCircle2, XCircle } from "lucide-react";
 import Loader from "../components/Loader";
 
 export default function Dashboard() {
@@ -20,6 +21,7 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [alerts, setAlerts] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [behaviorPrediction, setBehaviorPrediction] = useState(null);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -41,16 +43,36 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [medsRes, latestVitals, logsRes] = await Promise.all([
-        medicineAPI.getAllMedicines(),
-        vitalsAPI.getLatestVitals(),
-        medicationLogsAPI.getLogs(20)
-      ]);
+      const medsRes = await medicineAPI.getAllMedicines().catch(e => {
+        console.error("Meds fetch error:", e);
+        return { data: { medicines: [] } };
+      });
       setMedicines(medsRes.data.medicines);
+
+      const latestVitals = await vitalsAPI.getLatestVitals().catch(e => {
+        console.error("Vitals fetch error:", e);
+        return null;
+      });
       if (latestVitals) {
         setVitals({ hr: latestVitals.hr, spo2: latestVitals.spo2 });
       }
-      setLogs(logsRes.data.logs);
+
+      const logsRes = await medicationLogsAPI.getLogs(20).catch(e => {
+        console.error("Logs fetch error:", e);
+        return { data: { logs: [] } };
+      });
+      const doseLogs = logsRes.data.logs;
+      setLogs(doseLogs);
+
+      // Run Behavior Prediction AI
+      if (doseLogs.length > 0) {
+        const prediction = await aiService.askAI(
+          "Predict the patient's medication adherence behavior based on these logs.",
+          JSON.stringify(doseLogs),
+          AI_MODELS.BEHAVIOR_PREDICTOR
+        );
+        setBehaviorPrediction(prediction);
+      }
     } catch (error) {
       console.error("Dashboard fetch error:", error);
     } finally {
@@ -64,7 +86,7 @@ export default function Dashboard() {
     }
   }, [medicines, logs]);
 
-  const generateAlerts = () => {
+  const generateAlerts = async () => {
     const newAlerts = [];
 
     // 1. Dangerous Drug Interactions
@@ -134,7 +156,13 @@ export default function Dashboard() {
       });
     }
 
-    setAlerts(newAlerts);
+    const rankedAlerts = await aiService.askAI(
+      "Rank these clinical alerts by medical priority.",
+      JSON.stringify(newAlerts),
+      AI_MODELS.ALERT_RANKER
+    );
+    
+    setAlerts(Array.isArray(rankedAlerts) ? rankedAlerts : newAlerts);
   };
 
   useEffect(() => {
@@ -571,7 +599,12 @@ export default function Dashboard() {
 
           <section className="grid grid-cols-3 gap-4 pb-4">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-4">
-              <h3 className="text-[0.95rem] font-bold text-gray-900">Vitals</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-[0.95rem] font-bold text-gray-900">Vitals</h3>
+                <Link to="/add-vitals" className="text-[0.7rem] font-black text-[#0F766E] flex items-center gap-1 hover:underline">
+                  <Plus size={14} /> LOG NEW
+                </Link>
+              </div>
               <div className="grid grid-cols-1 gap-3">
                 <div className="bg-[#F8FAFC] rounded-xl p-3 border border-gray-100">
                   <div className="flex justify-between items-center mb-0.5">
@@ -632,7 +665,6 @@ export default function Dashboard() {
               </div>
             </div>
           </section>
-ion>
         </div>
       </main>
     </div>

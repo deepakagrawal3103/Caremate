@@ -13,12 +13,13 @@ export default function Login() {
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [isSigningUp, setIsSigningUp] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isSigningUp) {
       navigate("/");
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, isSigningUp]);
 
   const validate = () => {
     const newErrors = {};
@@ -57,12 +58,14 @@ export default function Login() {
       if (isLogin) {
         await login(formData.email, formData.password);
       } else {
+        setIsSigningUp(true);
         await register({ name: formData.name, email: formData.email, password: formData.password });
-        toast.success("Account created successfully!");
         navigate("/onboarding");
       }
     } catch (err) {
-      setErrors({ general: err.response?.data?.message || "An unexpected error occurred. Please try again." });
+      console.error("Auth error:", err);
+      // Firebase errors are in err.message or err.code
+      setErrors({ general: err.message || "An unexpected error occurred. Please try again." });
     } finally {
       setLoading(false);
     }
@@ -87,8 +90,8 @@ export default function Login() {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#e6eff6] text-gray-900 mb-6">
                 <span className="text-3xl" aria-hidden="true">⚕️</span>
               </div>
-              <h1 className="text-4xl font-sans text-gray-900 font-bold tracking-tight">The Safety Hub</h1>
-              <p className="text-base font-medium text-secondary mt-2 uppercase tracking-widest">Medical Safety Companion</p>
+              <h1 className="text-4xl font-sans text-gray-900 font-bold tracking-tight">CareMate</h1>
+              <p className="text-base font-medium text-secondary mt-2 uppercase tracking-widest">Your Health Safety Companion</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>

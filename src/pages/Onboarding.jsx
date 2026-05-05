@@ -249,7 +249,7 @@ export default function Onboarding() {
           </div>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <div className="space-y-6">
             <h2 className="text-base font-bold tracking-widest uppercase text-secondary">Chronic Conditions</h2>
             <div className="relative">
@@ -314,7 +314,7 @@ export default function Onboarding() {
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div className="space-y-6">
             <h2 className="text-base font-bold tracking-widest uppercase text-red-700">Allergies (Critical)</h2>
             <div className="relative">

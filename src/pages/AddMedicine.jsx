@@ -89,14 +89,13 @@ export default function AddMedicine() {
     if (step === 6) {
       setLoading(true);
       try {
-        // Format schedule as 24h times for the reminder system
-        const formattedSchedule = formData.times.map(t => {
-          const [time, modifier] = t.time.split(' ');
-          let [hours, minutes] = time.split(':');
-          if (hours === '12' && modifier === 'AM') hours = '00';
-          else if (modifier === 'PM' && hours !== '12') hours = parseInt(hours, 10) + 12;
-          return `${hours.toString().padStart(2, '0')}:${minutes}`;
-        });
+        // Map generic schedule tags to 24h times
+        const timeMap = {
+          "Morning": "08:00",
+          "Midday": "13:00",
+          "Night": "20:00"
+        };
+        const formattedSchedule = formData.schedule.map(s => timeMap[s] || "08:00");
 
         const res = await medicineAPI.addMedicine({
           ...formData,

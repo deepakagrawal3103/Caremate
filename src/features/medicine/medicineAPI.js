@@ -10,7 +10,7 @@ import {
   where 
 } from "firebase/firestore";
 import { db, auth } from "../../services/firebase";
-import { aiService } from "../../services/ai";
+import { aiService, AI_MODELS } from "../../services/ai";
 
 export const medicineAPI = {
   // Get all medicines for current user
@@ -69,7 +69,7 @@ export const medicineAPI = {
     const prompt = `Normalize this medicine name: "${name}". 
     Return a JSON object: { "brandName": string, "genericName": string, "class": string, "commonUses": string }`;
     
-    const response = await aiService.askAI(prompt, "You are a pharmaceutical data specialist. Return ONLY JSON.");
+    const response = await aiService.askAI(prompt, "You are a pharmaceutical data specialist. Return ONLY JSON.", AI_MODELS.CLINICAL);
     try {
       const jsonMatch = response.match(/\{.*\}/s);
       const data = JSON.parse(jsonMatch ? jsonMatch[0] : response);
@@ -105,7 +105,7 @@ export const medicineAPI = {
     
     Return JSON: { "status": "safe"|"warning"|"danger", "interactions": [ { "type": "medication"|"condition", "target": string, "severity": string, "effect": string } ] }`;
 
-    const response = await aiService.askAI(prompt, "You are a clinical pharmacist. Return ONLY JSON.");
+    const response = await aiService.askAI(prompt, "You are a clinical pharmacist. Return ONLY JSON.", AI_MODELS.INTERACTION);
     try {
       const jsonMatch = response.match(/\{.*\}/s);
       const interactionData = JSON.parse(jsonMatch ? jsonMatch[0] : response);

@@ -135,7 +135,7 @@ export default function Settings() {
         </div>
 
         <div className="mt-10 py-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 text-center">
-           <p className="text-[0.7rem] md:text-[0.8rem] font-bold text-gray-400 uppercase tracking-widest">MedSafe Clinical Suite v1.0.4</p>
+           <p className="text-[0.7rem] md:text-[0.8rem] font-bold text-gray-400 uppercase tracking-widest">CareMate Clinical Suite v1.0.4</p>
            <div className="flex gap-4 md:gap-6">
               <button className="text-[0.8rem] md:text-[0.85rem] font-bold text-gray-400 hover:text-gray-600">Privacy Policy</button>
               <button className="text-[0.8rem] md:text-[0.85rem] font-bold text-gray-400 hover:text-gray-600">Terms of Service</button>

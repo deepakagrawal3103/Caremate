@@ -1,4 +1,4 @@
-import { aiService } from "../../services/ai";
+import { aiService, AI_MODELS } from "../../services/ai";
 import { 
   collection, 
   addDoc, 
@@ -19,7 +19,7 @@ export const chatAPI = {
     if (!userId) throw new Error("User not authenticated");
 
     // 1. Get AI Response from Llama
-    const response = await aiService.askAI(question, userContext);
+    const response = await aiService.askAI(question, userContext, AI_MODELS.CHAT);
 
     // 2. Save the interaction to Firestore
     const chatRef = collection(db, "chats");

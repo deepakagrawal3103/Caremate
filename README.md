@@ -32,32 +32,17 @@ CareMate is a high-fidelity, AI-powered medication management and clinical safet
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (v16+)
-- npm or yarn
+- Node.js (v18+) & Python (3.10+)
+- npm install
+- pip install -r backend/requirements.txt
 
-### Installation
+### 🏃 One-Click Launch (Windows)
+Run the **`start_all.bat`** file in the root directory to launch the Frontend, Backend, and Sensor Simulator simultaneously.
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/deepakagrawal3103/Caremate.git
-   cd Caremate/client
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up Environment Variables**
-   Create a `.env` file in the `client` directory:
-   ```env
-   VITE_API_URL=http://localhost:5000/api
-   ```
-
-4. **Run the development server**
-   ```bash
-   npm run dev
-   ```
+### Manual Launch
+- **Frontend**: `npm run dev`
+- **Backend**: `python backend/main.py`
+- **Simulator**: `python backend/simulator.py`
 
 ## 🎨 Design Philosophy: Digital Atelier
 CareMate follows the **Digital Atelier** design system:

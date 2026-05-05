@@ -45,8 +45,9 @@ function App() {
           <Route path="/interaction-result" element={<PrivateRoute><InteractionResult /></PrivateRoute>} />
           <Route path="/patient-records" element={<PrivateRoute><PatientRecords /></PrivateRoute>} />
           <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
-          <Route path="/add-vitals" element={<PrivateRoute><AddVitals /></PrivateRoute>} />
-          <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+           <Route path="/add-vitals" element={<PrivateRoute><AddVitals /></PrivateRoute>} />
+           <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+           <Route path="/medication-history" element={<PrivateRoute><MedicationHistory /></PrivateRoute>} />
 
           
           <Route path="*" element={<Navigate to="/" />} />

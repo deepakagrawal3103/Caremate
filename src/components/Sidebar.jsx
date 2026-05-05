@@ -33,7 +33,7 @@ export default function Sidebar({ onClose }) {
     { label: "Dashboard", path: "/", icon: <LayoutDashboard size={18} strokeWidth={2.5} /> },
     { label: "Add Medicine", path: "/add-medicine", icon: <Plus size={18} strokeWidth={2.5} /> },
     { label: "Patient Records", path: "/patient-records", icon: <User size={18} strokeWidth={2.5} /> },
-    { label: "MedSafe AI Chat", path: "/chatbot", icon: <MessageSquare size={18} strokeWidth={2.5} /> },
+    { label: "CareMate AI Chat", path: "/chatbot", icon: <MessageSquare size={18} strokeWidth={2.5} /> },
     { label: "Alerts & Reminders", path: "/alerts", icon: <AlarmClock size={18} strokeWidth={2.5} /> },
   ];
 
@@ -47,7 +47,7 @@ export default function Sidebar({ onClose }) {
             <Plus className="w-4 h-4 stroke-[3]" />
           </div>
           <div>
-            <h1 className="font-bold text-gray-900 text-base leading-tight tracking-tight">MedSafe Pro</h1>
+            <h1 className="font-bold text-gray-900 text-base leading-tight tracking-tight">CareMate</h1>
             <p className="text-[0.65rem] text-gray-500 font-medium uppercase tracking-wider">Clinical Suite</p>
           </div>
         </div>

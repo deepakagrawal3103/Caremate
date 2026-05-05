@@ -8,8 +8,17 @@ import {
   limit
 } from "firebase/firestore";
 import { db, auth } from "../../services/firebase";
+import { aiService, AI_MODELS } from "../../services/ai";
 
 export const vitalsAPI = {
+  // Analyze vitals for anomalies using Local AI
+  analyzeVitals: async (vitalsReading) => {
+    return await aiService.askAI(
+      "Analyze this vitals reading for clinical anomalies.",
+      JSON.stringify(vitalsReading),
+      AI_MODELS.ANOMALY_ENGINE
+    );
+  },
   // Add new vitals reading
   addVitals: async (vitalsData) => {
     const userId = auth.currentUser?.uid;
@@ -32,13 +41,14 @@ export const vitalsAPI = {
     
     const q = query(
       collection(db, "vitals"), 
-      where("userId", "==", userId),
-      orderBy("timestamp", "desc"),
-      limit(1)
+      where("userId", "==", userId)
     );
     const querySnapshot = await getDocs(q);
     if (querySnapshot.empty) return null;
-    return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+    
+    const vitals = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    vitals.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    return vitals[0];
   },
   
   // Get vitals history for charts
@@ -48,12 +58,14 @@ export const vitalsAPI = {
     
     const q = query(
       collection(db, "vitals"), 
-      where("userId", "==", userId),
-      where("type", "==", type),
-      orderBy("timestamp", "desc"),
-      limit(days * 24) // Rough estimate for hourly readings
+      where("userId", "==", userId)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const vitals = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    return vitals
+      .filter(v => v.type === type)
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, days * 24);
   },
 };

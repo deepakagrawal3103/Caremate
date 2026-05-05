@@ -4,7 +4,7 @@ import { Search, Bell, Settings, AlertTriangle, Pill as PillIcon, X, Calendar, P
 import { useAuth } from "../context/AuthContext";
 import { medicineAPI } from "../features/medicine/medicineAPI";
 import { vitalsAPI } from "../features/vitals/vitalsAPI";
-import { aiService } from "../services/ai";
+import { aiService, AI_MODELS } from "../services/ai";
 import toast from "react-hot-toast";
 import Loader from "../components/Loader";
 
@@ -31,13 +31,22 @@ export default function RiskScore() {
       ]);
       
       const meds = medsRes.data.medicines;
-      setMedications(meds);
-      
       if (vitalsRes) {
         setVitals({
           heartRate: vitalsRes.hr || 72,
           spo2: vitalsRes.spo2 || 98
         });
+      }
+
+      // Run Specialized Local AI Analysis
+      const crisisAnalysis = await aiService.askAI(
+        "Generate a health crisis forecast based on current medications and vitals.",
+        JSON.stringify({ medications: meds, vitals: vitalsRes }),
+        AI_MODELS.CRISIS_FORECASTER
+      );
+      
+      if (crisisAnalysis && crisisAnalysis.score !== undefined) {
+        setScore(crisisAnalysis.score);
       }
 
       // Run AI Analysis if there are at least 2 medications

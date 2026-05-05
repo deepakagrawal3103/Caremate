@@ -16,7 +16,7 @@ export default function QRPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      setPublicLink(`https://caremate-pro.ai/profile/${user.uid}`);
+      setPublicLink(`https://caremate.ai/profile/${user.uid}`);
       loadData();
     }
   }, [user, authLoading]);

@@ -86,7 +86,10 @@ export default function MedicineManagement() {
   };
 
   const handleEditClick = (med) => {
-    setEditingMed({ ...med, reminders: med.reminders || ["08:00"] });
+    setEditingMed({ 
+      ...med, 
+      schedule: med.schedule || ["08:00"] 
+    });
     setIsEditModalOpen(true);
   };
 
@@ -471,49 +474,64 @@ export default function MedicineManagement() {
                   <input type="text" value={editingMed.category} onChange={(e) => setEditingMed({ ...editingMed, category: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-[#0F766E] font-medium text-gray-900 text-[1rem]" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[0.85rem] md:text-[0.9rem] font-bold text-gray-700">Dosage</label>
+                  <label className="text-[0.85rem] md:text-[0.9rem] font-bold text-gray-700">Dosage Value</label>
                   <div className="flex gap-3">
                     <div className="flex-1">
-                      <input type="text" placeholder="Amount" value={editingMed.dosage.split(/(\d+)/)[1] || "1"} onChange={(e) => { const unit = editingMed.dosage.replace(/\d+/g, "").trim(); setEditingMed({ ...editingMed, dosage: `${e.target.value}${unit}` }); }} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-[#0F766E] font-medium text-gray-900" />
+                      <input 
+                        type="number" 
+                        value={editingMed.dosageValue || 1} 
+                        onChange={(e) => setEditingMed({ ...editingMed, dosageValue: parseInt(e.target.value) })} 
+                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-[#0F766E] font-medium text-gray-900" 
+                      />
                     </div>
                     <div className="w-[100px] md:w-[120px]">
-                      <select value={editingMed.dosage.replace(/\d+/g, "").trim().toLowerCase() || "pill"} onChange={(e) => { const amount = editingMed.dosage.split(/(\d+)/)[1] || "1"; setEditingMed({ ...editingMed, dosage: `${amount}${e.target.value}` }); }} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-[#0F766E] font-medium text-gray-900">
-                        <option value="pill">pill</option>
-                        <option value="ml">ml</option>
+                      <select 
+                        value={editingMed.form || "Tablet"} 
+                        onChange={(e) => setEditingMed({ ...editingMed, form: e.target.value, category: e.target.value })} 
+                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-[#0F766E] font-medium text-gray-900"
+                      >
+                        <option value="Tablet">Tablet</option>
+                        <option value="Capsule">Capsule</option>
+                        <option value="Syrup">Syrup</option>
+                        <option value="Injection">Injection</option>
                       </select>
                     </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[0.85rem] md:text-[0.9rem] font-bold text-gray-700">Frequency</label>
-                    <select value={editingMed.frequency.split(",")[0].trim()} onChange={(e) => { const parts = editingMed.frequency.split(","); const rest = parts.length > 1 ? parts.slice(1).join(",") : ""; setEditingMed({ ...editingMed, frequency: `${e.target.value}${rest ? "," + rest : ""}` }); }} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-[#0F766E] font-medium text-gray-900">
-                      <option value="Once daily">Once daily</option>
-                      <option value="Twice daily">Twice daily</option>
-                      <option value="Three times daily">3 times daily</option>
-                      <option value="As needed">As needed</option>
-                    </select>
+                    <label className="text-[0.85rem] md:text-[0.9rem] font-bold text-gray-700">Strength</label>
+                    <input 
+                      type="text" 
+                      value={editingMed.strength || ""} 
+                      onChange={(e) => setEditingMed({ ...editingMed, strength: e.target.value })} 
+                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-[#0F766E] font-medium text-gray-900" 
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[0.85rem] md:text-[0.9rem] font-bold text-gray-700">Food Instruction</label>
-                    <select value={editingMed.frequency.toLowerCase().includes("before") ? "Before Food" : editingMed.frequency.toLowerCase().includes("after") ? "After Food" : "With Food"} onChange={(e) => { const freq = editingMed.frequency.split(",")[0].trim(); setEditingMed({ ...editingMed, frequency: `${freq}, ${e.target.value}` }); }} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-[#0F766E] font-medium text-gray-900">
-                      <option value="Before Food">Before Food</option>
-                      <option value="After Food">After Food</option>
-                      <option value="With Food">With Food</option>
-                    </select>
+                    <label className="text-[0.85rem] md:text-[0.9rem] font-bold text-gray-700">Inventory Status</label>
+                    <input 
+                      type="number" 
+                      value={editingMed.inventory || 0} 
+                      onChange={(e) => setEditingMed({ ...editingMed, inventory: parseInt(e.target.value) })} 
+                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-[#0F766E] font-medium text-gray-900" 
+                    />
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <label className="text-[0.85rem] md:text-[0.9rem] font-bold text-gray-700">Dose Reminders</label>
-                    <button type="button" onClick={() => setEditingMed({ ...editingMed, reminders: [...editingMed.reminders, "12:00"] })} className="text-[#0F766E] text-[0.8rem] font-bold flex items-center gap-1 hover:underline">
+                    <label className="text-[0.85rem] md:text-[0.9rem] font-bold text-gray-700">Schedule (24h)</label>
+                    <button type="button" onClick={() => setEditingMed({ ...editingMed, schedule: [...editingMed.schedule, "12:00"] })} className="text-[#0F766E] text-[0.8rem] font-bold flex items-center gap-1 hover:underline">
                       <Plus className="w-3.5 h-3.5 stroke-[3]" /> Add Time
                     </button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {editingMed.reminders.map((time, idx) => (
-                      <div key={idx} className="relative group">
-                        <input type="time" value={time} onChange={(e) => { const newReminders = [...editingMed.reminders]; newReminders[idx] = e.target.value; setEditingMed({ ...editingMed, reminders: newReminders }); }} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-[#0F766E] font-medium text-gray-900" />
+                    {(editingMed.schedule || []).map((time, idx) => (
+                      <div key={idx} className="relative group flex items-center gap-2">
+                        <input type="time" value={time} onChange={(e) => { const newSchedule = [...editingMed.schedule]; newSchedule[idx] = e.target.value; setEditingMed({ ...editingMed, schedule: newSchedule }); }} className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-5 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-[#0F766E] font-medium text-gray-900" />
+                        <button type="button" onClick={() => setEditingMed({...editingMed, schedule: editingMed.schedule.filter((_, i) => i !== idx)})} className="text-red-400 hover:text-red-600">
+                          <X size={18} />
+                        </button>
                       </div>
                     ))}
                   </div>

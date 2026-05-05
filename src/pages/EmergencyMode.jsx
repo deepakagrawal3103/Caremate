@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { emergencyAPI } from "../features/emergency/emergencyAPI";
 import { medicineAPI } from "../features/medicine/medicineAPI";
 import { vitalsAPI } from "../features/vitals/vitalsAPI";
+import { aiService, AI_MODELS } from "../services/ai";
 import toast from "react-hot-toast";
 
 export default function EmergencyMode() {
@@ -15,6 +16,27 @@ export default function EmergencyMode() {
 
   const [vitals, setVitals] = React.useState({ hr: "--", spo2: "--" });
   const [medications, setMedications] = React.useState([]);
+
+  // Local AI Fall Detection simulation/check
+  React.useEffect(() => {
+    if (!vitals.hr || vitals.hr === "--") return;
+
+    const checkFall = async () => {
+      const result = await aiService.askAI(
+        "Detect if current vitals and motion indicate a fall.",
+        JSON.stringify(vitals),
+        AI_MODELS.FALL_DETECTOR
+      );
+      
+      if (result.status === "fall_detected") {
+        toast.error("FALL DETECTED! SOS protocol initiated.", { duration: 10000 });
+        handleTriggerSOS();
+      }
+    };
+
+    const timer = setInterval(checkFall, 10000); // Check every 10s
+    return () => clearInterval(timer);
+  }, [vitals]);
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -51,7 +73,7 @@ export default function EmergencyMode() {
       {/* Header */}
       <header className="bg-white px-6 py-2 flex items-center justify-between shadow-sm border-b border-gray-100">
         <div className="flex items-center gap-4">
-          <h1 className="text-[#0F766E] font-black text-[1rem] tracking-tight uppercase">MedSecure Pro</h1>
+          <h1 className="text-[#0F766E] font-black text-[1rem] tracking-tight uppercase">CareMate</h1>
           <div className="h-4 w-[1px] bg-gray-200"></div>
           <span className="text-[#DC2626] font-black text-[0.65rem] tracking-[0.2em] flex items-center gap-2">
             <span className="animate-pulse text-[0.7rem]">✱</span> CRITICAL PROTOCOL
@@ -200,7 +222,7 @@ export default function EmergencyMode() {
 
               <div className="flex-1">
                 <p className="text-[0.55rem] font-bold text-gray-400 uppercase tracking-[0.15em] mb-1">Clinic Reference</p>
-                <h4 className="text-[0.9rem] md:text-[1rem] font-black mb-0.5 tracking-tight uppercase">MedSecure Network</h4>
+                <h4 className="text-[0.9rem] md:text-[1rem] font-black mb-0.5 tracking-tight uppercase">CareMate Network</h4>
                 <div className="bg-[#14B8A6]/10 border border-[#14B8A6]/20 p-2.5 rounded-lg mb-2">
                    <p className="text-[0.55rem] md:text-[0.6rem] font-medium text-gray-300 leading-tight">Emergency Medical Database Entry #{user?.uid?.slice(0, 8)}</p>
                 </div>

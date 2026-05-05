@@ -68,7 +68,7 @@ export default function PatientRecords() {
 
   React.useEffect(() => {
     if (!authLoading && user) {
-      setPublicLink(`https://caremate-pro.ai/profile/${user.uid}`);
+      setPublicLink(`https://caremate.ai/profile/${user.uid}`);
       loadData();
     }
   }, [user, authLoading]);
@@ -234,7 +234,7 @@ export default function PatientRecords() {
   );
 
   const clinicalReports = reports;
-  const chronicConditions = conditions.length > 0 ? conditions : (user?.conditions?.map(c => ({ name: c, status: 'Active' })) || []);
+  const chronicConditions = conditions.length > 0 ? conditions : (user?.diseases?.map(c => ({ name: c, status: 'Active' })) || []);
   const allergies = user?.allergies || [];
 
   return (
@@ -408,13 +408,6 @@ export default function PatientRecords() {
             <p className="text-text-muted font-bold text-[0.7rem] uppercase tracking-widest">Clinical Data Management & History</p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="bg-white border border-gray-100 p-0.5 rounded-lg flex shadow-sm">
-              <button className="px-3 py-1 text-[0.7rem] font-black uppercase tracking-widest bg-gray-50 text-primary rounded-md shadow-sm">List</button>
-              <button className="px-3 py-1 text-[0.7rem] font-black uppercase tracking-widest text-gray-400 hover:text-gray-600 transition-colors">Timeline</button>
-            </div>
-            <button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-100 rounded-lg font-black text-[0.7rem] text-primary uppercase tracking-widest shadow-sm hover:bg-gray-50 transition-all">
-              <Filter size={14} /> Filter
-            </button>
             <button 
               onClick={handleExport}
               className="btn-premium"
