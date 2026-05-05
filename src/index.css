@@ -1,47 +1,107 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --primary: #0F4D4A;
+  --primary-dark: #0A3D3A;
+  --primary-light: #F0FDFA;
+  --secondary: #52DFBB;
+  --accent: #FF5A5F;
+  --background: #F8FAFC;
+  --surface: #FFFFFF;
+  --surface-low: #F1F5F9;
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+  --border-color: #E2E8F0;
+}
+
 @layer base {
   body {
-    @apply bg-background text-gray-900 font-sans antialiased;
+    @apply bg-background text-text-main font-sans antialiased;
+    font-size: 0.875rem; /* High density base font */
+    line-height: 1.5;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-sans font-bold text-gray-900;
+    @apply font-sans font-black tracking-tight text-primary;
   }
 }
 
 @layer components {
-  .card {
-    @apply bg-white rounded-xl shadow-ambient p-4 transition-shadow duration-200;
+  .card-premium {
+    @apply bg-surface rounded-2xl border border-border shadow-sm p-4 transition-all duration-300 hover:shadow-md;
   }
   
-  .card-tonal {
-    @apply bg-surface-low rounded-xl p-4;
+  .badge-compact {
+    @apply px-2 py-0.5 rounded-md text-[0.6rem] font-black uppercase tracking-widest border border-current;
   }
 
-  .btn-primary {
-    @apply bg-primary text-white font-medium py-2 px-4 rounded-xl hover:bg-opacity-90 transition-all active:scale-[0.98];
+  .btn-premium {
+    @apply bg-primary text-white font-black py-2 px-4 rounded-xl text-[0.75rem] uppercase tracking-widest transition-all active:scale-95 hover:bg-primary-dark shadow-lg shadow-primary/10 flex items-center justify-center gap-2;
   }
 
-  .btn-secondary {
-    @apply bg-surface-low text-primary font-medium py-2 px-4 rounded-xl hover:bg-surface-lowest transition-all active:scale-[0.98];
-  }
-
-  .input-minimal {
-    @apply w-full bg-transparent border-b border-surface-lowest py-2 text-primary focus:outline-none focus:border-primary transition-colors;
+  .input-premium {
+    @apply w-full bg-surface-low border-transparent rounded-xl px-4 py-2 text-[0.85rem] font-bold focus:bg-white focus:ring-2 focus:ring-primary/10 outline-none transition-all;
   }
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - Compact */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
-  @apply bg-transparent;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-surface-lowest rounded-full hover:bg-secondary;
+  @apply bg-gray-200 rounded-full hover:bg-gray-300;
+}
+
+/* Print Optimization */
+@media print {
+  @page {
+    size: A4;
+    margin: 1cm;
+  }
+
+  html, body {
+    font-size: 9pt !important;
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  aside, nav, header, button, .no-print, .mobile-nav, .tabs-container, [role="tablist"] {
+    display: none !important;
+  }
+
+  main, .main-content, .tab-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    position: static !important;
+  }
+
+  section {
+    page-break-inside: avoid;
+    margin-bottom: 0.75rem !important;
+    padding: 0.75rem !important;
+    border: 1px solid #eee !important;
+    border-radius: 6px !important;
+  }
+
+  .grid {
+    display: grid !important;
+    gap: 0.5rem !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }

@@ -25,14 +25,20 @@ import {
   Zap,
   Upload,
   Camera as CameraIcon,
-  ShieldCheck
+  ShieldCheck,
+  Bell,
+  Volume2,
+  X,
+  Check,
+  History,
+  Activity
 } from "lucide-react";
 
 export default function AddMedicine() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [scanning, setScanning] = useState(false);
+  const [scanningStatus, setScanningStatus] = useState('idle'); // idle, scanning, result
   const [analysisResult, setAnalysisResult] = useState(null);
 
   // Form State
@@ -46,91 +52,61 @@ export default function AddMedicine() {
       { time: "08:00 AM", instruction: "After Food" }
     ],
     duration: "7 Days",
-    inventory: 14
+    inventory: 14,
+    frequencyType: "Daily",
+    reminderEnabled: true,
+    voiceReminder: "None"
   });
 
+  const totalSteps = 7;
+
+  // Handle Scan Logic
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setLoading(true);
-    toast.loading("Processing image with AI...");
+    setScanningStatus('scanning');
     
     // Simulate OCR delay
     setTimeout(() => {
-      toast.dismiss();
-      // Since we don't have a real vision API, we'll "auto-detect" some fields
-      // and then let the user refine them in Step 3.
       setFormData(prev => ({
         ...prev,
-        name: "Detected Medicine",
-        strength: "Detecting...",
+        name: "Amoxicillin",
+        strength: "500mg",
       }));
-      setStep(3);
-      toast.success("Text extracted! Please verify details.");
+      setScanningStatus('result');
       setLoading(false);
-    }, 2500);
+    }, 2000);
   };
 
-  const handleScan = async (text) => {
-    if (!text.trim()) {
-      toast.error("Please enter label text");
-      return;
-    }
-    
-    setLoading(true);
-    setScanning(true);
-    try {
-      const { data } = await medicineAPI.normalizeMedicine(text);
-      setFormData(prev => ({
-        ...prev,
-        name: data.brandName || prev.name,
-        dosage: data.genericName || prev.dosage,
-        strength: data.strength || prev.strength,
-        category: data.class || prev.category
-      }));
-      toast.success(`Identified: ${data.brandName}`);
-      setStep(3); // Move to Name step
-    } catch (error) {
-      toast.error("Analysis failed. Please enter manually.");
-    } finally {
-      setLoading(false);
-      setScanning(false);
-    }
+  const handleManualEntry = (name) => {
+    setFormData(prev => ({ ...prev, name }));
+    setStep(3);
   };
 
   const nextStep = async () => {
-    if (step === 5) {
+    if (step === 6) {
       setLoading(true);
       try {
         // Format schedule as 24h times for the reminder system
         const formattedSchedule = formData.times.map(t => {
           const [time, modifier] = t.time.split(' ');
           let [hours, minutes] = time.split(':');
-          if (hours === '12') hours = '00';
-          if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+          if (hours === '12' && modifier === 'AM') hours = '00';
+          else if (modifier === 'PM' && hours !== '12') hours = parseInt(hours, 10) + 12;
           return `${hours.toString().padStart(2, '0')}:${minutes}`;
         });
 
         const res = await medicineAPI.addMedicine({
           ...formData,
           schedule: formattedSchedule,
-          category: formData.form // Using form as category if not specified
+          category: formData.form
         });
 
-        // Trigger AI Interaction Check
         const analysis = await medicineAPI.checkInteraction(res.data.medicine._id);
         setAnalysisResult(analysis.data);
-        
-        if (analysis.data.status === 'danger') {
-          toast.error("CRITICAL: Harmful interaction detected!");
-        } else if (analysis.data.status === 'warning') {
-          toast.success("Medicine added with safety warnings.");
-        } else {
-          toast.success("Medicine added and safety verified!");
-        }
-
-        setStep(6);
+        setStep(7);
       } catch (error) {
         toast.error("Failed to add medicine");
       } finally {
@@ -146,229 +122,194 @@ export default function AddMedicine() {
     else setStep(prev => prev - 1);
   };
 
-
+  const renderProgress = () => (
+    <div className="flex gap-1.5 mb-6">
+      {[...Array(totalSteps)].map((_, i) => (
+        <div 
+          key={i} 
+          className={`h-1 flex-1 rounded-full transition-all duration-700 ${i + 1 <= step ? 'bg-primary' : 'bg-gray-200'}`}
+        />
+      ))}
+    </div>
+  );
 
   return (
-    <div className="flex-1 bg-[#F8FAFC] min-h-screen font-sans pb-24 selection:bg-[#0F4D4A]/10">
-      {/* Mobile Header */}
-      <header className="lg:hidden px-4 py-3 flex items-center justify-between bg-white border-b border-gray-100 sticky top-0 z-50">
-        <div className="flex items-center gap-2">
-          <button onClick={prevStep} className="p-1 text-[#0F4D4A] active:scale-90 transition-transform">
-            <ChevronLeft size={28} />
-          </button>
-          <h1 className="text-[1.2rem] font-bold text-[#0F4D4A] tracking-tight">CareMate</h1>
+    <div className="flex-1 bg-[#F8FAFC] min-h-screen font-sans pb-24 selection:bg-[#0F4D4A]/10 overflow-x-hidden">
+      {/* Top Header */}
+      <header className="px-4 py-3 flex items-center justify-between bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-[100] h-[52px]">
+        <button onClick={prevStep} className="p-1.5 text-text-muted hover:text-primary hover:bg-gray-50 rounded-lg transition-all">
+          <ChevronLeft size={20} strokeWidth={3} />
+        </button>
+        <div className="flex flex-col items-center">
+          <span className="text-[0.6rem] font-black text-text-muted uppercase tracking-[0.2em] leading-none mb-1">Step {step} of {totalSteps}</span>
+          <h1 className="text-[0.9rem] font-black text-primary uppercase tracking-tight">Add Medication</h1>
         </div>
-        <Link to="/emergency-mode" className="bg-[#B91C1C] text-white px-4 py-1.5 rounded-full text-[0.8rem] font-bold active:scale-95 transition-transform shadow-sm">
-          SOS
-        </Link>
+        <div className="w-8"></div>
       </header>
 
-      <main className="px-5 py-6 max-w-md mx-auto">
-        
-        {/* STEP 1: CHOICE */}
+      <main className="px-5 py-6 max-w-lg mx-auto">
+        {renderProgress()}
+
+        {/* STEP 1: ENTRY */}
         {step === 1 && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
-            <div className="text-center space-y-3 pt-4">
-              <div className="inline-flex items-center gap-2 bg-[#F0FDFA] px-3 py-1 rounded-full text-[#0F4D4A] text-[0.7rem] font-black uppercase tracking-widest border border-[#CCFBF1]">
-                <Zap size={12} fill="currentColor" /> Smart Addition
-              </div>
-              <h2 className="text-[2rem] font-black text-[#0F4D4A] leading-tight">Add Medicine</h2>
-              <p className="text-[1rem] text-gray-500 font-medium leading-relaxed max-w-[280px] mx-auto">
-                Select your preferred way to record your new medication.
-              </p>
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="text-center space-y-2 pt-2">
+              <h2 className="text-[1.8rem] font-black text-primary leading-tight uppercase tracking-tight">Medication Entry</h2>
+              <p className="text-[0.9rem] text-text-muted font-bold uppercase tracking-widest">Select entry method</p>
             </div>
 
-            <div className="space-y-5">
-              {/* Scan Option */}
-              <div
+            <div className="grid grid-cols-1 gap-4">
+              <button
                 onClick={() => setStep(2)}
-                className="group bg-white rounded-[2.5rem] border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer flex flex-col items-center gap-5 relative overflow-hidden"
+                className="group bg-white rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:border-primary/20 transition-all active:scale-95 text-left flex items-center gap-5"
               >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[#CCFBF1]/20 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform"></div>
-                <div className="w-20 h-20 bg-[#F0FDFA] rounded-3xl flex items-center justify-center text-[#0F4D4A] shadow-inner relative z-10">
-                  <ScanLine size={36} strokeWidth={2.5} />
+                <div className="w-16 h-16 bg-primary-light rounded-2xl flex items-center justify-center text-primary shrink-0 group-hover:rotate-12 transition-transform">
+                  <ScanLine size={32} strokeWidth={3} />
                 </div>
-                <div className="text-center relative z-10">
-                  <h3 className="text-[1.3rem] font-black text-[#0F4D4A] mb-1">AI Smart Scan</h3>
-                  <p className="text-[0.9rem] text-gray-400 font-bold uppercase tracking-wider">Fastest & Reliable</p>
+                <div>
+                  <h3 className="text-[1.2rem] font-black text-primary uppercase leading-none mb-1">AI Smart Scan</h3>
+                  <p className="text-[0.65rem] text-text-muted font-black uppercase tracking-[0.2em]">Fast Optical Recognition</p>
                 </div>
-              </div>
+              </button>
 
-              {/* Manual Option */}
-              <div
-                onClick={() => setStep(3)}
-                className="group bg-[#0F4D4A] rounded-[2.5rem] p-8 shadow-xl shadow-[#0F4D4A]/20 active:scale-95 transition-all cursor-pointer flex flex-col items-center gap-5 relative overflow-hidden"
+              <button
+                onClick={() => { setScanningStatus('manual'); setStep(2); }}
+                className="group bg-primary rounded-3xl p-6 shadow-xl shadow-primary/20 active:scale-95 transition-all text-left flex items-center gap-5"
               >
-                <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-                <div className="w-20 h-20 bg-white/10 rounded-3xl flex items-center justify-center text-white relative z-10">
-                  <FileEdit size={36} strokeWidth={2.5} />
+                <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center text-white shrink-0 group-hover:-rotate-12 transition-transform">
+                  <FileEdit size={32} strokeWidth={3} />
                 </div>
-                <div className="text-center relative z-10">
-                  <h3 className="text-[1.3rem] font-black text-white mb-1">Manual Entry</h3>
-                  <p className="text-[0.9rem] text-white/50 font-bold uppercase tracking-wider">Enter details yourself</p>
+                <div>
+                  <h3 className="text-[1.2rem] font-black text-white uppercase leading-none mb-1">Manual Entry</h3>
+                  <p className="text-[0.65rem] text-white/50 font-black uppercase tracking-[0.2em]">Precise Data Input</p>
                 </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex gap-4 items-start">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                <Lightbulb size={24} />
-              </div>
-              <p className="text-[0.9rem] text-gray-500 font-medium leading-relaxed">
-                <span className="font-bold text-gray-900">Pro Tip:</span> Scanning the prescription or package automatically checks for dosage errors and interactions.
-              </p>
+              </button>
             </div>
           </div>
         )}
 
-        {/* STEP 2: SCANNING */}
+        {/* STEP 2: SCAN / INPUT */}
         {step === 2 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-6 duration-500">
-            <div className="bg-white rounded-[3rem] p-8 border border-gray-100 shadow-sm space-y-6">
-              <div className="w-16 h-16 bg-[#F0FDFA] rounded-2xl flex items-center justify-center text-[#0F4D4A] mx-auto">
-                <ScanLine size={32} />
+            {scanningStatus === 'scanning' ? (
+              <div className="flex flex-col items-center justify-center py-20 space-y-8">
+                <div className="relative w-48 h-48 bg-white rounded-[3rem] border-2 border-dashed border-[#0F766E]/30 flex items-center justify-center overflow-hidden">
+                   <div className="absolute top-0 left-0 w-full h-1 bg-[#0F766E] shadow-[0_0_15px_#0F766E] animate-scan-bar z-10"></div>
+                   <Pill size={80} className="text-[#0F766E]/20" />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-2xl font-black text-[#0F4D4A] animate-pulse">Scanning...</h3>
+                  <p className="text-gray-500 font-medium mt-2">Extracting medical details from label</p>
+                </div>
               </div>
-              <div className="text-center">
-                <h3 className="text-xl font-black text-[#0F4D4A]">Smart Addition</h3>
-                <p className="text-[0.9rem] text-gray-500 font-medium">Use AI to extract details from a photo or label text.</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <label className="flex flex-col items-center justify-center gap-3 p-6 bg-[#F8FAFC] rounded-3xl border-2 border-dashed border-gray-100 hover:border-[#0F766E]/30 cursor-pointer transition-all group">
-                   <CameraIcon size={28} className="text-gray-400 group-hover:text-[#0F766E]" />
-                   <span className="text-[0.7rem] font-black uppercase text-gray-400 group-hover:text-[#0F766E]">Take Photo</span>
-                   <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileUpload} />
-                </label>
-                <label className="flex flex-col items-center justify-center gap-3 p-6 bg-[#F8FAFC] rounded-3xl border-2 border-dashed border-gray-100 hover:border-[#0F766E]/30 cursor-pointer transition-all group">
-                   <Upload size={28} className="text-gray-400 group-hover:text-[#0F766E]" />
-                   <span className="text-[0.7rem] font-black uppercase text-gray-400 group-hover:text-[#0F766E]">Upload Image</span>
-                   <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-                </label>
-              </div>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100"></div></div>
-                <div className="relative flex justify-center text-[0.7rem] font-black text-gray-300 bg-white px-4">OR USE TEXT</div>
-              </div>
-
-              <textarea 
-                id="labelInput"
-                placeholder="Paste label text here..."
-                className="w-full h-24 bg-[#F8FAFC] border-none rounded-2xl p-4 text-[0.9rem] font-medium focus:ring-2 focus:ring-[#0F766E]/20"
-              ></textarea>
-
-              <div className="flex gap-4">
-                <button 
-                  onClick={prevStep}
-                  className="flex-1 bg-white border border-gray-100 text-gray-400 py-4 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-95"
-                >
-                  Back
-                </button>
-                <button 
-                  onClick={() => handleScan(document.getElementById('labelInput').value)}
-                  disabled={loading}
-                  className="flex-[2] bg-[#0F4D4A] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-[#0F4D4A]/10 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  {loading ? "Analyzing..." : "Analyze Text"}
-                </button>
-              </div>
-            </div>
-
-            <p className="text-center text-[0.85rem] font-bold text-gray-400 uppercase tracking-widest">
-              Or <button onClick={() => setStep(3)} className="text-[#0F766E] border-b-2 border-[#0F766E]/20 ml-1">Enter manually</button>
-            </p>
-          </div>
-        )}
-        
-        {/* STEP 3: REFINE DETAILS */}
-        {step === 3 && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-6 duration-500">
-            <div>
-              <h3 className="text-[0.75rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Validate Data</h3>
-              <div className="bg-white rounded-[2rem] border border-gray-100 p-8 shadow-sm space-y-6">
+            ) : scanningStatus === 'result' ? (
+              <div className="space-y-8 text-center">
+                <div className="w-24 h-24 bg-emerald-50 text-emerald-600 rounded-[2rem] flex items-center justify-center mx-auto border-4 border-white shadow-xl">
+                   <Check size={40} strokeWidth={3} />
+                </div>
                 <div className="space-y-2">
-                  <label className="text-[0.7rem] font-black text-[#0F4D4A] uppercase tracking-widest ml-1">Medicine Name</label>
-                  <div className="relative">
-                    <input 
-                      type="text" 
-                      value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full bg-[#F8FAFC] border-2 border-transparent focus:border-[#0F4D4A]/10 focus:bg-white rounded-2xl p-4 font-bold text-[#0F4D4A] outline-none transition-all"
-                    />
-                    <Pill className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300" size={20} />
+                  <h3 className="text-2xl font-black text-[#0F4D4A]">Detected Medicine</h3>
+                  <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm inline-block min-w-[280px]">
+                     <span className="text-[0.7rem] font-black text-gray-400 uppercase tracking-widest block mb-2">Verified Name</span>
+                     <p className="text-3xl font-black text-[#0F4D4A] tracking-tight">{formData.name}</p>
+                     <p className="text-gray-400 font-bold mt-1">{formData.strength}</p>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <label className="text-[0.7rem] font-black text-[#0F4D4A] uppercase tracking-widest ml-1">Form</label>
-                  <input 
-                    type="text" 
-                    value={formData.form}
-                    className="w-full bg-[#F8FAFC] border-2 border-transparent rounded-2xl p-4 font-bold text-[#0F4D4A] outline-none"
-                    readOnly
-                  />
+                <div className="flex flex-col gap-3">
+                  <button onClick={() => setStep(3)} className="w-full bg-[#0F4D4A] text-white py-5 rounded-full font-black text-[1.1rem] shadow-xl active:scale-95 transition-all">Yes, Correct</button>
+                  <button onClick={() => setScanningStatus('manual')} className="w-full text-[#0F766E] font-black uppercase text-[0.8rem] tracking-widest">No, Edit Name</button>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-8">
+                <div className="text-center space-y-3">
+                  <h2 className="text-[2rem] font-black text-[#0F4D4A] leading-tight">Medicine Name</h2>
+                  <p className="text-[1.1rem] text-gray-500 font-medium">What is the name on the package?</p>
+                </div>
+                
+                <div className="relative group">
+                  <div className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#0F766E] transition-colors">
+                    <Pill size={24} />
+                  </div>
+                  <input 
+                    autoFocus
+                    type="text" 
+                    placeholder="e.g. Paracetamol"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    className="w-full bg-white border-2 border-gray-50 focus:border-[#0F766E]/20 rounded-[2.5rem] py-6 pl-16 pr-8 text-[1.2rem] font-bold text-[#0F4D4A] shadow-sm outline-none transition-all"
+                  />
+                </div>
 
-            <div className="bg-emerald-50 border border-emerald-100 rounded-3xl p-6 flex gap-4">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                <CheckCircle2 size={24} />
+                <div className="flex flex-wrap gap-2">
+                  {["Aspirin", "Ibuprofen", "Metformin", "Atorvastatin"].map(m => (
+                    <button key={m} onClick={() => handleManualEntry(m)} className="px-5 py-2.5 bg-gray-50 text-gray-500 rounded-full text-[0.85rem] font-bold hover:bg-[#0F766E]/10 hover:text-[#0F766E] transition-all">
+                      + {m}
+                    </button>
+                  ))}
+                </div>
+
+                {scanningStatus === 'idle' && (
+                  <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm text-center">
+                    <h4 className="text-[0.7rem] font-black text-gray-300 uppercase tracking-widest mb-6">Or use Camera</h4>
+                    <label className="flex flex-col items-center gap-4 cursor-pointer">
+                      <div className="w-20 h-20 bg-[#F0FDFA] rounded-full flex items-center justify-center text-[#0F766E]">
+                        <CameraIcon size={32} />
+                      </div>
+                      <span className="text-[0.9rem] font-black text-[#0F766E] uppercase tracking-widest">Scan Label</span>
+                      <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileUpload} />
+                    </label>
+                  </div>
+                )}
               </div>
-              <p className="text-[0.9rem] text-emerald-800 font-medium leading-relaxed">
-                <span className="font-bold">Molecule Verified.</span> This medication is safe for your current cardiac profile.
-              </p>
-            </div>
-
-            <div className="flex gap-4">
-              <button
-                onClick={prevStep}
-                className="px-8 bg-white border border-gray-100 text-gray-400 py-5 rounded-full font-black text-[1.1rem] active:scale-95 transition-all"
-              >
-                Back
-              </button>
-              <button
-                onClick={nextStep}
-                className="flex-1 bg-[#0F4D4A] text-white py-5 rounded-full font-black text-[1.1rem] flex items-center justify-center gap-3 shadow-xl shadow-[#0F4D4A]/20 active:scale-95 transition-all"
-              >
-                Set Schedule <ArrowRight size={20} />
-              </button>
-            </div>
+            )}
           </div>
         )}
 
-        {/* STEP 4: SCHEDULE */}
-        {step === 4 && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-6 duration-500">
-            <section>
-              <h4 className="text-[0.75rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Dosage per intake</h4>
-              <div className="bg-white rounded-[2.5rem] border border-gray-100 p-8 shadow-sm flex items-center justify-between">
-                <button
-                  onClick={() => setFormData({ ...formData, dosageValue: Math.max(0.5, formData.dosageValue - 0.5) })}
-                  className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 active:bg-gray-100 transition-colors"
-                >
-                  <Minus size={28} />
-                </button>
-                <div className="text-center">
-                  <span className="text-[3rem] font-black text-[#0F4D4A] leading-none">{formData.dosageValue}</span>
-                  <p className="text-[0.8rem] text-gray-400 font-black uppercase tracking-widest mt-1">Tablets</p>
-                </div>
-                <button
-                  onClick={() => setFormData({ ...formData, dosageValue: formData.dosageValue + 0.5 })}
-                  className="w-14 h-14 rounded-2xl bg-[#0F4D4A] flex items-center justify-center text-white shadow-lg shadow-[#0F4D4A]/20 active:scale-90 transition-transform"
-                >
-                  <Plus size={28} />
-                </button>
-              </div>
-            </section>
+        {/* STEP 3: DOSAGE */}
+        {step === 3 && (
+          <div className="space-y-10 animate-in fade-in slide-in-from-right-6 duration-500">
+            <div className="text-center space-y-3">
+              <h2 className="text-[1.8rem] font-black text-[#0F4D4A] leading-tight">How many times?</h2>
+              <p className="text-[1.1rem] text-gray-500 font-medium">Select daily frequency</p>
+            </div>
 
-            <section>
-              <h4 className="text-[0.75rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Frequency</h4>
-              <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { id: 1, label: "Once", desc: "1x per day" },
+                { id: 2, label: "Twice", desc: "2x per day" },
+                { id: 3, label: "Thrice", desc: "3x per day" },
+                { id: 0, label: "Custom", desc: "Set schedule" }
+              ].map(opt => (
+                <button
+                  key={opt.label}
+                  onClick={() => {
+                    const times = opt.id === 1 ? ["Morning"] : opt.id === 2 ? ["Morning", "Night"] : opt.id === 3 ? ["Morning", "Midday", "Night"] : ["Morning"];
+                    setFormData({...formData, schedule: times});
+                  }}
+                  className={`p-6 rounded-[2.5rem] border-2 text-left transition-all active:scale-95 ${
+                    (opt.id > 0 && formData.schedule.length === opt.id) || (opt.id === 0 && ![1,2,3].includes(formData.schedule.length))
+                      ? 'bg-[#0F4D4A] border-[#0F4D4A] text-white shadow-xl shadow-[#0F4D4A]/20'
+                      : 'bg-white border-gray-50 text-[#0F4D4A] shadow-sm'
+                  }`}
+                >
+                  <h4 className="text-[1.2rem] font-black mb-1">{opt.label}</h4>
+                  <p className={`text-[0.7rem] font-bold uppercase tracking-widest ${
+                    (opt.id > 0 && formData.schedule.length === opt.id) || (opt.id === 0 && ![1,2,3].includes(formData.schedule.length))
+                      ? 'text-white/50'
+                      : 'text-gray-400'
+                  }`}>{opt.desc}</p>
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="text-[0.6rem] font-black text-text-muted uppercase tracking-[0.2em] text-center">Select Timings</h4>
+              <div className="flex justify-center gap-2">
                 {[
-                  { name: "Morning", icon: <Sunrise size={24} /> },
-                  { name: "Midday", icon: <Sun size={24} /> },
-                  { name: "Night", icon: <Moon size={24} /> }
+                  { name: "Morning", icon: <Sunrise size={18} /> },
+                  { name: "Midday", icon: <Sun size={18} /> },
+                  { name: "Night", icon: <Moon size={18} /> }
                 ].map((item) => {
                   const isSelected = formData.schedule.includes(item.name);
                   return (
@@ -380,263 +321,256 @@ export default function AddMedicine() {
                           : [...formData.schedule, item.name];
                         setFormData({ ...formData, schedule: newSchedule });
                       }}
-                      className={`flex flex-col items-center justify-center gap-4 py-6 rounded-[2rem] border-2 transition-all active:scale-95 ${
+                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all ${
                         isSelected
-                          ? 'bg-[#0F4D4A] border-[#0F4D4A] text-white shadow-lg shadow-[#0F4D4A]/20'
-                          : 'bg-white border-transparent text-gray-400 shadow-sm'
+                          ? 'bg-primary-light border-primary text-primary'
+                          : 'bg-white border-gray-100 text-gray-400'
                       }`}
                     >
                       {item.icon}
-                      <span className="text-[0.8rem] font-black uppercase tracking-wider">{item.name}</span>
+                      <span className="text-[0.7rem] font-black uppercase tracking-tight">{item.name}</span>
                     </button>
                   );
                 })}
               </div>
-            </section>
+            </div>
+          </div>
+        )}
 
-            <section>
-               <h4 className="text-[0.75rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Stock Inventory</h4>
-               <div className="bg-white rounded-[2rem] p-6 border border-gray-100 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                       <Pill size={20} />
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <button 
-                        onClick={() => {
-                          const newInv = Math.max(0, formData.inventory - 1);
-                          const dosesPerDay = formData.schedule.length * formData.dosageValue;
-                          const newDuration = dosesPerDay > 0 ? Math.ceil(newInv / dosesPerDay) : 0;
-                          setFormData({...formData, inventory: newInv, duration: `${newDuration} Days`});
-                        }}
-                        className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 active:bg-gray-100"
-                      >
-                        <Minus size={16} />
-                      </button>
-                      <div className="flex items-center gap-1 bg-[#F8FAFC] px-3 py-1 rounded-xl border border-gray-100">
-                        <input 
-                          type="text" 
-                          value={formData.inventory}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/[^0-9]/g, '');
-                            const numVal = parseInt(val) || 0;
-                            const dosesPerDay = formData.schedule.length * formData.dosageValue;
-                            const newDuration = dosesPerDay > 0 ? Math.ceil(numVal / dosesPerDay) : 0;
-                            setFormData({...formData, inventory: numVal, duration: `${newDuration} Days`});
-                          }}
-                          className="w-12 bg-transparent border-none text-center font-black text-[#0F4D4A] p-0 focus:ring-0"
-                        />
-                        <span className="font-bold text-[#0F4D4A] text-[0.9rem]">Tablets</span>
-                      </div>
-                      <button 
-                        onClick={() => {
-                          const newInv = formData.inventory + 1;
-                          const dosesPerDay = formData.schedule.length * formData.dosageValue;
-                          const newDuration = dosesPerDay > 0 ? Math.ceil(newInv / dosesPerDay) : 0;
-                          setFormData({...formData, inventory: newInv, duration: `${newDuration} Days`});
-                        }}
-                        className="w-8 h-8 rounded-lg bg-[#0F4D4A] flex items-center justify-center text-white"
-                      >
-                        <Plus size={16} />
-                      </button>
-                    </div>
+        {/* STEP 4: SCHEDULE */}
+        {step === 4 && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+            <div className="text-center space-y-2">
+              <h2 className="text-[1.6rem] font-black text-primary uppercase tracking-tight">Set Schedule</h2>
+              <p className="text-[0.85rem] text-text-muted font-bold uppercase tracking-widest">When should you take it?</p>
+            </div>
+
+            <div className="flex p-0.5 bg-gray-100 rounded-2xl">
+              {["Daily", "Selected Days"].map(type => (
+                <button
+                  key={type}
+                  onClick={() => setFormData({...formData, frequencyType: type})}
+                  className={`flex-1 py-3 rounded-xl text-[0.75rem] font-black uppercase tracking-widest transition-all ${
+                    formData.frequencyType === type ? 'bg-white text-primary shadow-sm' : 'text-gray-400'
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+
+            <div className="card-premium space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                   <h4 className="text-[0.9rem] font-black text-primary uppercase tracking-tight">Treatment Span</h4>
+                   <p className="text-[0.65rem] text-text-muted font-black uppercase tracking-widest">Auto-duration tracking</p>
+                </div>
+                <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-100">
+                   <button onClick={() => setFormData({...formData, duration: `${Math.max(1, parseInt(formData.duration) - 1)} Days`})} className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-primary shadow-sm active:scale-90"><Minus size={14} /></button>
+                   <span className="text-base font-black text-primary w-12 text-center leading-none">{formData.duration.split(' ')[0]}D</span>
+                   <button onClick={() => setFormData({...formData, duration: `${parseInt(formData.duration) + 1} Days`})} className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white shadow-md active:scale-90"><Plus size={14} /></button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 bg-primary-light p-4 rounded-xl border border-primary/10">
+                <Calendar className="text-primary" size={24} />
+                <div>
+                  <p className="text-[0.6rem] font-black text-primary uppercase tracking-[0.2em]">Start Date</p>
+                  <p className="text-[0.95rem] font-black text-primary uppercase leading-tight">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 5: REMINDER */}
+        {step === 5 && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+            <div className="text-center space-y-2">
+              <h2 className="text-[1.6rem] font-black text-primary uppercase tracking-tight">Reminders</h2>
+              <p className="text-[0.85rem] text-text-muted font-bold uppercase tracking-widest">Never miss a dose again</p>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+               <div className="p-8 flex flex-col items-center text-center space-y-4">
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500 ${formData.reminderEnabled ? 'bg-primary text-white rotate-12 shadow-lg shadow-primary/20' : 'bg-gray-100 text-gray-300'}`}>
+                     <Bell size={32} strokeWidth={3} />
                   </div>
-                  <div className="text-right">
-                    <p className="text-[0.6rem] font-black text-gray-400 uppercase tracking-widest">Total Stock</p>
+                  <div className="space-y-1">
+                     <h3 className="text-lg font-black text-primary uppercase tracking-tight">Notifications</h3>
+                     <p className="text-[0.75rem] text-text-muted font-bold leading-relaxed">Alerts for each scheduled dose.</p>
+                  </div>
+                  <button 
+                    onClick={() => setFormData({...formData, reminderEnabled: !formData.reminderEnabled})}
+                    className={`px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[0.65rem] transition-all border ${
+                      formData.reminderEnabled ? 'bg-primary-light text-primary border-primary/20' : 'bg-gray-50 text-gray-400 border-gray-100'
+                    }`}
+                  >
+                    {formData.reminderEnabled ? 'Reminders On' : 'Reminders Off'}
+                  </button>
+               </div>
+               
+               <div className="bg-gray-50/50 p-6 border-t border-gray-100">
+                  <h4 className="text-[0.6rem] font-black text-text-muted uppercase tracking-[0.2em] mb-3">Voice Reminder (Optional)</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {["None", "Soft Bell", "AI Voice", "Emergency"].map(voice => (
+                      <button
+                        key={voice}
+                        onClick={() => setFormData({...formData, voiceReminder: voice})}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
+                          formData.voiceReminder === voice ? 'bg-white border-primary text-primary shadow-sm' : 'bg-white border-transparent text-gray-400'
+                        }`}
+                      >
+                        <Volume2 size={14} />
+                        <span className="text-[0.7rem] font-black uppercase tracking-tight">{voice}</span>
+                      </button>
+                    ))}
                   </div>
                </div>
-            </section>
-
-            <section>
-               <h4 className="text-[0.75rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Treatment Duration (Calculated)</h4>
-               <div className="bg-[#F0FDFA] rounded-[2rem] p-6 border border-[#CCFBF1] flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#0F766E]">
-                       <Calendar size={20} />
-                    </div>
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => {
-                            const val = parseInt(formData.duration) || 1;
-                            const newVal = Math.max(1, val - 1);
-                            setFormData({...formData, duration: `${newVal} Days`, inventory: newVal * formData.schedule.length * formData.dosageValue});
-                          }}
-                          className="w-8 h-8 rounded-lg bg-white/50 text-[#0F766E] flex items-center justify-center"
-                        >
-                          <Minus size={16} />
-                        </button>
-                        
-                        <div className="flex items-center gap-1 bg-white/40 px-3 py-1 rounded-xl border border-[#0F766E]/10">
-                          <input 
-                            type="text" 
-                            value={formData.duration.split(' ')[0]}
-                            onChange={(e) => {
-                              const val = e.target.value.replace(/[^0-9]/g, '');
-                              const numVal = parseInt(val) || 0;
-                              setFormData({...formData, duration: `${val} Days`, inventory: numVal * formData.schedule.length * formData.dosageValue});
-                            }}
-                            className="w-12 bg-transparent border-none text-center font-black text-[#0F766E] p-0 focus:ring-0"
-                          />
-                          <span className="font-bold text-[#0F766E] text-[1.1rem]">Days</span>
-                        </div>
-
-                        <button 
-                          onClick={() => {
-                            const val = parseInt(formData.duration) || 1;
-                            const newVal = val + 1;
-                            setFormData({...formData, duration: `${newVal} Days`, inventory: newVal * formData.schedule.length * formData.dosageValue});
-                          }}
-                          className="w-8 h-8 rounded-lg bg-[#0F766E] text-white flex items-center justify-center"
-                        >
-                          <Plus size={16} />
-                        </button>
-                      </div>
-                      <p className="text-[0.7rem] text-[#0F766E]/60 font-bold uppercase tracking-tight mt-1 ml-1">Manual adjustment active</p>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-            <div className="flex gap-4">
-              <button
-                onClick={prevStep}
-                className="px-8 bg-white border border-gray-100 text-gray-400 py-5 rounded-full font-black text-[1.1rem] active:scale-95 transition-all"
-              >
-                Back
-              </button>
-              <button
-                onClick={nextStep}
-                className="flex-1 bg-[#0F4D4A] text-white py-5 rounded-full font-black text-[1.1rem] flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all"
-              >
-                <span>Review</span> <ArrowRight size={20} />
-              </button>
             </div>
           </div>
         )}
 
-        {/* STEP 5: REVIEW */}
-        {step === 5 && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-6 duration-500">
-             <div className="text-center space-y-2 mb-2">
-                <h2 className="text-[1.8rem] font-black text-[#0F4D4A]">Final Review</h2>
-                <p className="text-gray-500 font-medium text-[0.95rem]">Confirm details before activation</p>
+        {/* STEP 6: CONFIRMATION */}
+        {step === 6 && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+             <div className="text-center space-y-1">
+                <h2 className="text-[1.8rem] font-black text-primary uppercase tracking-tight leading-none">Confirm Entry</h2>
+                <p className="text-text-muted font-bold text-[0.85rem] uppercase tracking-widest">Final Clinical Review</p>
              </div>
 
-             <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
-                <div className="p-8 bg-gradient-to-br from-[#0F4D4A] to-[#0A3D3A] text-white">
-                   <div className="flex justify-between items-start mb-6">
-                      <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center">
+             <div className="card-premium overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-4">
+                   <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 shadow-inner">
+                      <ShieldCheck size={20} />
+                   </div>
+                </div>
+
+                <div className="p-4 md:p-6 space-y-8">
+                   <div className="flex items-center gap-5">
+                      <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center text-white shadow-lg shadow-primary/20 rotate-3">
                          <Pill size={28} />
                       </div>
-                      <span className="px-3 py-1 bg-[#52DFBB] text-[#0F4D4A] rounded-lg text-[0.65rem] font-black uppercase tracking-widest">Prescribed</span>
+                      <div>
+                         <h3 className="text-xl font-black text-primary uppercase leading-tight">{formData.name}</h3>
+                         <p className="text-primary font-black text-[0.65rem] uppercase tracking-widest opacity-80">{formData.strength} • {formData.form}</p>
+                      </div>
                    </div>
-                   <h3 className="text-[1.6rem] font-black leading-none mb-2">{formData.name}</h3>
-                   <p className="text-white/60 font-bold text-[0.9rem] uppercase tracking-wider">{formData.strength} • {formData.form}</p>
-                </div>
-                
-                <div className="p-8 space-y-6">
-                   <div className="flex justify-between items-center">
-                      <span className="text-gray-400 font-bold uppercase text-[0.7rem] tracking-widest">Dosage</span>
-                      <span className="text-[#0F4D4A] font-black text-[1.1rem]">{formData.dosageValue} Unit(s)</span>
-                   </div>
-                   <div className="flex justify-between items-center">
-                      <span className="text-gray-400 font-bold uppercase text-[0.7rem] tracking-widest">Schedule</span>
-                      <span className="text-[#0F4D4A] font-black text-[1.1rem]">{formData.schedule.join(" & ")}</span>
-                   </div>
-                   <div className="flex justify-between items-center">
-                      <span className="text-gray-400 font-bold uppercase text-[0.7rem] tracking-widest">Duration</span>
-                      <span className="text-[#0F4D4A] font-black text-[1.1rem]">{formData.duration}</span>
-                   </div>
-                   
-                   <div className="pt-4 border-t border-gray-50 flex items-start gap-4">
-                      <AlertCircle className="text-amber-500 shrink-0 mt-1" size={20} />
-                      <p className="text-[0.85rem] text-gray-500 font-medium leading-snug">
-                         You have <span className="font-bold text-gray-900">{formData.inventory} doses</span> remaining in your inventory. We&apos;ll alert you 2 days before it ends.
-                      </p>
+
+                   <div className="grid grid-cols-1 gap-3">
+                      <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                         <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-primary shadow-sm"><History size={20} /></div>
+                         <div>
+                            <p className="text-[0.55rem] font-black text-text-muted uppercase tracking-[0.2em] mb-0.5">Dosage & Schedule</p>
+                            <p className="text-[0.95rem] font-black text-primary uppercase tracking-tight leading-none">{formData.dosageValue} Unit • {formData.schedule.join(", ")}</p>
+                         </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                         <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-primary shadow-sm"><Calendar size={20} /></div>
+                         <div>
+                            <p className="text-[0.55rem] font-black text-text-muted uppercase tracking-[0.2em] mb-0.5">Duration</p>
+                            <p className="text-[0.95rem] font-black text-primary uppercase tracking-tight leading-none">{formData.duration}</p>
+                         </div>
+                      </div>
                    </div>
                 </div>
              </div>
-
-            <div className="flex gap-4">
-              <button
-                onClick={prevStep}
-                className="px-8 bg-white border border-gray-100 text-gray-400 py-5 rounded-full font-black text-[1.1rem] active:scale-95 transition-all"
-              >
-                Back
-              </button>
-              <button
-                onClick={nextStep}
-                className="flex-1 bg-[#0F4D4A] text-white py-5 rounded-full font-black text-[1.2rem] shadow-2xl active:scale-95 transition-all"
-              >
-                Confirm & Add
-              </button>
-            </div>
           </div>
         )}
 
-        {/* STEP 6: SUCCESS */}
-        {step === 6 && (
-          <div className="flex flex-col items-center justify-center text-center py-12 space-y-8 animate-in zoom-in-95 duration-500">
+        {/* STEP 7: AFTER SAVE / SUCCESS */}
+        {step === 7 && (
+          <div className="flex flex-col items-center justify-center text-center py-10 space-y-8 animate-in zoom-in-95 duration-500">
             <div className="relative">
-               <div className="absolute inset-0 bg-[#CCFBF1] rounded-full blur-2xl animate-pulse opacity-50"></div>
-               <div className="w-32 h-32 bg-[#F0FDFA] rounded-[2.5rem] border-4 border-white shadow-xl flex items-center justify-center text-[#0F766E] relative z-10">
-                 <CheckCircle2 size={56} strokeWidth={3} />
+               <div className="absolute inset-0 bg-emerald-100 rounded-full blur-3xl animate-pulse opacity-40"></div>
+               <div className="w-28 h-28 bg-primary rounded-[2.5rem] shadow-2xl flex items-center justify-center text-white relative z-10 border-[6px] border-white">
+                 <CheckCircle2 size={50} strokeWidth={3} />
                </div>
             </div>
             
-            <div className="space-y-3">
-              <h2 className="text-[2.2rem] font-black text-[#0F4D4A] leading-tight">Medication Added</h2>
-              <p className="text-[1.05rem] text-gray-500 font-medium max-w-[280px] mx-auto leading-relaxed">
-                <span className="font-bold text-[#0F4D4A]">{formData.name}</span> has been successfully integrated into your care plan.
+            <div className="space-y-2">
+              <h2 className="text-[2rem] font-black text-primary leading-tight uppercase tracking-tight">Saved!</h2>
+              <p className="text-[0.95rem] text-text-muted font-bold uppercase tracking-widest max-w-[280px] mx-auto leading-relaxed">
+                <span className="text-primary">{formData.name}</span> is active.
               </p>
             </div>
 
             {analysisResult && (
-              <div className={`w-full p-6 rounded-3xl border-2 transition-all animate-in fade-in slide-in-from-top-4 duration-1000 delay-300 ${
+              <div className={`w-full max-w-sm p-6 rounded-3xl border-2 shadow-sm transition-all animate-in fade-in slide-in-from-top-4 duration-1000 delay-300 ${
                 analysisResult.status === 'danger' ? 'bg-red-50 border-red-100 text-red-900' :
                 analysisResult.status === 'warning' ? 'bg-amber-50 border-amber-100 text-amber-900' :
                 'bg-emerald-50 border-emerald-100 text-emerald-900'
               }`}>
-                <div className="flex items-center gap-3 mb-3 justify-center">
-                   <ShieldCheck className={analysisResult.status === 'danger' ? 'text-red-600' : analysisResult.status === 'warning' ? 'text-amber-600' : 'text-emerald-600'} />
-                   <h4 className="text-[0.9rem] font-black uppercase tracking-widest">AI Safety Result: {analysisResult.status}</h4>
+                <div className="flex items-center gap-2 mb-3 justify-center">
+                   <Activity size={18} className={analysisResult.status === 'danger' ? 'text-red-600' : analysisResult.status === 'warning' ? 'text-amber-600' : 'text-emerald-600'} />
+                   <h4 className="text-[0.7rem] font-black uppercase tracking-[0.2em]">Safety Scan</h4>
                 </div>
-                <p className="text-[0.85rem] font-medium leading-relaxed">
-                  {analysisResult.interactions?.[0]?.effect || "No harmful interactions detected with your current health profile."}
+                <p className="text-[0.85rem] font-black leading-relaxed mb-2 uppercase tracking-tight">
+                   Status: {analysisResult.status}
                 </p>
-                {analysisResult.status !== 'safe' && (
-                   <p className="mt-3 text-[0.7rem] font-black uppercase text-red-600 bg-white/50 py-1 rounded-full">Check dashboard for detailed clinical alerts</p>
-                )}
+                <p className="text-[0.75rem] font-bold leading-relaxed opacity-80">
+                  {analysisResult.interactions?.[0]?.effect || "Safe for use with current health profile."}
+                </p>
               </div>
             )}
 
-            <div className="w-full space-y-4 pt-6">
+            <div className="w-full space-y-3 pt-4">
               <button
                 onClick={() => navigate("/")}
-                className="w-full bg-[#0F4D4A] text-white py-5 rounded-full font-black text-[1.1rem] shadow-xl active:scale-95 transition-all"
+                className="btn-premium w-full py-4 text-[1rem]"
               >
                 Go to Dashboard
               </button>
               <button
-                onClick={() => setStep(1)}
-                className="w-full bg-white border border-gray-100 text-gray-500 py-5 rounded-full font-black text-[1.1rem] shadow-sm active:scale-95 transition-all"
+                onClick={() => { setStep(1); setAnalysisResult(null); }}
+                className="w-full bg-white text-text-muted py-3 rounded-xl font-black text-[0.7rem] uppercase tracking-widest active:scale-95 transition-all border border-gray-100"
               >
                 Add Another
               </button>
             </div>
           </div>
         )}
+
+        {/* STICKY FOOTER NAVIGATION */}
+        {step < 7 && (
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex gap-3 z-[100] max-w-lg mx-auto rounded-t-3xl shadow-2xl">
+            {step > 1 && (
+              <button
+                onClick={prevStep}
+                className="w-12 h-12 bg-gray-50 text-text-muted border border-gray-100 rounded-2xl flex items-center justify-center active:scale-90 transition-transform"
+              >
+                <ArrowLeft size={20} />
+              </button>
+            )}
+            <button
+              onClick={nextStep}
+              disabled={loading || (step === 2 && !formData.name)}
+              className="flex-1 bg-primary text-white py-3 rounded-2xl font-black text-[0.9rem] uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-3 border-white/20 border-t-white rounded-full animate-spin"></div>
+              ) : step === 6 ? (
+                <>Finish <Check size={18} strokeWidth={3} /></>
+              ) : (
+                <>Next <ArrowRight size={18} strokeWidth={3} /></>
+              )}
+            </button>
+          </div>
+        )}
       </main>
 
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes scan-bar {
-          0% { top: 0; }
-          50% { top: 100%; }
-          100% { top: 0; }
+          0% { transform: translateY(0); }
+          50% { transform: translateY(180px); }
+          100% { transform: translateY(0); }
         }
         .animate-scan-bar {
-          animation: scan-bar 2s linear infinite;
+          animation: scan-bar 2.5s ease-in-out infinite;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
         }
       `}} />
     </div>

@@ -5,7 +5,6 @@ import PrivateRoute from "./components/PrivateRoute";
 
 import Dashboard from "./pages/Dashboard";
 import AddMedicine from "./pages/AddMedicine";
-import HealthResume from "./pages/HealthResume";
 import QRPage from "./pages/QRPage";
 import Chatbot from "./pages/Chatbot";
 import Onboarding from "./pages/Onboarding";
@@ -44,7 +43,6 @@ function App() {
           <Route path="/chatbot" element={<PrivateRoute><Chatbot /></PrivateRoute>} />
           <Route path="/alerts" element={<PrivateRoute><Reminders /></PrivateRoute>} />
           <Route path="/interaction-result" element={<PrivateRoute><InteractionResult /></PrivateRoute>} />
-          <Route path="/patient-records" element={<PrivateRoute><PatientRecords /></PrivateRoute>} />
           <Route path="/patient-records" element={<PrivateRoute><PatientRecords /></PrivateRoute>} />
           <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
           <Route path="/add-vitals" element={<PrivateRoute><AddVitals /></PrivateRoute>} />

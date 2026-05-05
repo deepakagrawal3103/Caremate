@@ -32,16 +32,17 @@ export const medicationLogsAPI = {
     
     const q = query(
       collection(db, "medication_logs"), 
-      where("userId", "==", userId),
-      orderBy("timestamp", "desc"),
-      limit(max)
+      where("userId", "==", userId)
     );
     
     const querySnapshot = await getDocs(q);
     const logs = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    }));
+    }))
+    // Sort and limit in memory to avoid needing a composite index
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, max);
     
     return { data: { logs } };
   }

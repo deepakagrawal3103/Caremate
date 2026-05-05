@@ -20,11 +20,12 @@ export const recordsAPI = {
     
     const q = query(
       collection(db, "reports"), 
-      where("userId", "==", userId),
-      orderBy("createdAt", "desc")
+      where("userId", "==", userId)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const reports = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // Sort in memory to avoid needing a composite index
+    return reports.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   },
 
   uploadReport: async (file, name, type) => {

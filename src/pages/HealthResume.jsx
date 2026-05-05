@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import api from "../services/api";
 import { 
   ChevronLeft, 
   ShieldCheck, 
   PhoneCall, 
-  BarChart2, 
-  TrendingUp, 
   Pill, 
   Printer, 
   History,
-  Activity 
+  Activity,
+  User,
+  FileText
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { medicineAPI } from "../features/medicine/medicineAPI";
 import { vitalsAPI } from "../features/vitals/vitalsAPI";
+import { QRCodeCanvas } from "qrcode.react";
 import toast from "react-hot-toast";
 
 export default function HealthResume() {
@@ -72,6 +72,8 @@ export default function HealthResume() {
     phone: userData.emergencyContactPhone || "Not set"
   };
 
+  const publicLink = `https://caremate-pro.ai/profile/${user?.uid}`;
+
   return (
     <div className="flex-1 bg-[#F8FAFC] min-h-screen font-sans overflow-x-hidden">
        {/* Header */}
@@ -94,174 +96,244 @@ export default function HealthResume() {
         <div className="mb-8 md:mb-10 flex flex-col md:flex-row md:justify-between md:items-end gap-6">
            <div>
               <p className="text-[0.7rem] md:text-sm font-bold uppercase tracking-widest text-[#0F766E] mb-2">Patient Records / Portfolio 2024</p>
-              <h1 className="text-2xl md:text-4xl font-bold text-gray-900 tracking-tight mb-3">Clinical Health Resume</h1>
+              <h1 className="text-2xl md:text-4xl font-bold text-gray-900 tracking-tight mb-3 uppercase">Clinical Health Resume</h1>
               <p className="text-gray-500 max-w-xl leading-relaxed text-[0.95rem] md:text-[1.05rem]">
                 A curated summary of medical heritage, active management, and preventative risk analysis.
               </p>
            </div>
            <div className="text-left md:text-right border-l-2 md:border-l-0 md:border-r-2 border-[#0F766E]/20 pl-4 md:pl-0 md:pr-4 py-1">
               <span className="block text-[0.65rem] md:text-sm font-bold uppercase tracking-widest text-gray-400 mb-1">Dossier ID</span>
-              <span className="font-mono text-gray-900 font-semibold text-base md:text-lg">#SH-772-9910-CL</span>
+              <span className="font-mono text-gray-900 font-semibold text-base md:text-lg uppercase">#SH-{user?.uid?.slice(0, 6)}</span>
            </div>
         </div>
 
-        {/* Profile Identity Card */}
-        <section className="bg-white rounded-3xl shadow-sm border border-[#E5E7EB] p-6 md:p-10 flex flex-col lg:flex-row gap-8 md:gap-10 items-center mb-10">
-            <div className="w-32 h-32 md:w-48 md:h-48 rounded-3xl bg-[#F0FDFA] overflow-hidden shrink-0 relative flex items-center justify-center border border-[#CCFBF1]">
-               <img src={user?.photoURL || "https://img.freepik.com/premium-vector/female-doctor-character-with-stethoscope-3d-avatar-vector-illustration_1150-65063.jpg"} alt="Avatar" className="w-full h-full object-cover" />
-               <div className="absolute top-2 right-2 md:top-3 md:right-3 w-8 h-8 md:w-10 md:h-10 bg-[#0F766E] rounded-xl md:rounded-2xl flex justify-center items-center text-white shadow-md">
-                 <ShieldCheck className="w-4 h-4 md:w-5 md:h-5" />
-               </div>
-            </div>
-           
-           <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-8">
-             <div>
-               <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">{userData.name}</h2>
-               <p className="text-[0.7rem] md:text-sm uppercase font-bold tracking-widest text-gray-400 mb-6">Patient Profile & Identity</p>
-               
-               <div className="space-y-4 md:space-y-5">
-                  <div className="flex items-center justify-between pb-3 md:pb-4 border-b border-[#E5E7EB]">
-                    <span className="text-[0.95rem] md:text-[1.05rem] font-semibold text-gray-500">Biological Age</span>
-                    <span className="font-bold text-gray-900 text-lg md:text-xl">{user?.age || "--"} {user?.age ? 'Years' : ''}</span>
-                  </div>
-                  <div className="flex items-center justify-between pb-3 md:pb-4 border-b border-[#E5E7EB]">
-                    <span className="text-[0.95rem] md:text-[1.05rem] font-semibold text-gray-500">Primary Condition</span>
-                    <span className="text-[0.85rem] md:text-[1.05rem] font-bold text-[#059669] bg-[#ecfdf5] px-3 md:px-4 py-1 md:py-1.5 rounded-xl tracking-wide">{user?.conditions?.[0] || "Undiagnosed"}</span>
-                  </div>
-                   <div className="flex items-center justify-between pb-3 md:pb-4 border-b border-[#E5E7EB]">
-                     <span className="text-[0.95rem] md:text-[1.05rem] font-semibold text-gray-500">Blood Group</span>
-                     <span className="font-bold text-[#DC2626] text-lg md:text-xl">{user?.bloodGroup || "Not set"}</span>
-                   </div>
-               </div>
-             </div>
+        {/* 1. Basic Identity (TOP - VERY CLEAR) */}
+        <section className="bg-white rounded-3xl shadow-sm border border-[#E5E7EB] p-6 md:p-10 mb-10">
+            <div className="flex flex-col lg:flex-row gap-8 md:gap-10 items-center">
+              <div className="w-32 h-32 md:w-40 md:h-40 rounded-3xl bg-[#F0FDFA] overflow-hidden shrink-0 relative flex items-center justify-center border border-[#CCFBF1]">
+                 <img src={user?.photoURL || "https://img.freepik.com/premium-vector/female-doctor-character-with-stethoscope-3d-avatar-vector-illustration_1150-65063.jpg"} alt="Avatar" className="w-full h-full object-cover" />
+                 <div className="absolute top-2 right-2 w-8 h-8 bg-[#0F766E] rounded-xl flex justify-center items-center text-white shadow-md">
+                   <ShieldCheck className="w-4 h-4" />
+                 </div>
+              </div>
              
-             <div className="flex items-end justify-end">
-               <div className="bg-[#F8FAFC] border border-[#E5E7EB] rounded-2xl md:rounded-3xl p-6 md:p-8 w-full h-full flex flex-col justify-center">
-                  <div className="flex items-start gap-4">
-                     <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-[#F0FDFA] text-[#0F766E] flex items-center justify-center shrink-0">
-                       <PhoneCall className="w-5 h-5 md:w-6 md:h-6" />
-                     </div>
-                     <div>
-                       <span className="block text-[0.65rem] md:text-sm uppercase font-bold tracking-widest text-gray-400 mb-1">Emergency Care Contact</span>
-                       <h4 className="font-bold text-gray-900 text-[1rem] md:text-[1.1rem] mb-1">{emergencyContact.name}</h4>
-                       <span className="text-[0.95rem] md:text-[1.05rem] font-mono font-semibold text-gray-500">{emergencyContact.phone}</span>
-                     </div>
-                  </div>
+              <div className="flex-1 w-full">
+                 <div className="flex items-center gap-3 mb-4">
+                   <div className="w-8 h-8 bg-[#F0FDFA] rounded-lg flex items-center justify-center text-[#0F766E]">
+                     <User size={18} />
+                   </div>
+                   <h3 className="text-[0.75rem] font-black text-gray-400 uppercase tracking-[0.2em]">Basic Identity</h3>
+                 </div>
+                 
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                   <div>
+                     <p className="text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider mb-1">Full Name</p>
+                     <h2 className="text-2xl md:text-3xl font-black text-gray-900 leading-tight uppercase">{userData.name}</h2>
+                   </div>
+                   <div>
+                     <p className="text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider mb-1">Age / Gender</p>
+                     <p className="text-2xl font-black text-gray-900 leading-tight">
+                       {user?.age || "--"} YRS / {user?.gender || "MALE"}
+                     </p>
+                   </div>
+                   <div>
+                     <p className="text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider mb-1">Blood Group</p>
+                     <p className="text-2xl font-black text-red-600 leading-tight bg-red-50 inline-block px-3 py-0.5 rounded-xl border border-red-100 uppercase">
+                       {user?.bloodGroup || "O+"}(VE)
+                     </p>
+                   </div>
+                 </div>
+              </div>
+            </div>
+        </section>
+
+        {/* 2. Critical Alerts (MOST IMPORTANT 🔥) - RED / BOLD */}
+        <section className="bg-[#FFF5F5] rounded-3xl p-6 md:p-10 border-2 border-red-100 shadow-sm relative overflow-hidden mb-10">
+          <div className="absolute top-0 right-0 p-6 opacity-10">
+            <ShieldCheck size={120} className="text-red-600" />
+          </div>
+          
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-red-200">
+              <ShieldCheck size={24} fill="currentColor" />
+            </div>
+            <h3 className="text-[1rem] font-black text-red-600 uppercase tracking-[0.2em]">Critical Alerts 🔥</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-red-100">
+              <p className="text-[0.75rem] font-black text-red-500 uppercase tracking-widest mb-3">Allergies (Drug / Food)</p>
+              <p className="text-[1.25rem] font-black text-red-700 leading-tight uppercase">
+                {user?.allergies?.length > 0 ? user.allergies.join(", ") : "NO KNOWN ALLERGIES"}
+              </p>
+            </div>
+            
+            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-red-100">
+              <p className="text-[0.75rem] font-black text-red-500 uppercase tracking-widest mb-3">High-Risk Conditions</p>
+              <p className="text-[1.25rem] font-black text-red-700 leading-tight uppercase">
+                {user?.conditions?.length > 0 ? user.conditions.join(", ") : "NONE REPORTED"}
+              </p>
+              <p className="text-[0.65rem] text-red-400 font-bold mt-2 uppercase">(Heart, Diabetes, BP)</p>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-red-100">
+              <p className="text-[0.75rem] font-black text-red-500 uppercase tracking-widest mb-3">Dangerous Medications</p>
+              <p className="text-[1.25rem] font-black text-red-700 leading-tight uppercase">
+                {medications.filter(m => m.interactionStatus === 'danger').length > 0 
+                  ? medications.filter(m => m.interactionStatus === 'danger').map(m => m.name).join(", ") 
+                  : "NONE DETECTED"}
+              </p>
+              <p className="text-[0.65rem] text-red-400 font-bold mt-2 uppercase">Interaction Risk: LOW</p>
+            </div>
+          </div>
+        </section>
+
+        {/* 3. Emergency & QR (REAL POWER FEATURE) */}
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-10">
+          {/* Emergency Contact */}
+          <div className="bg-white rounded-3xl shadow-sm border border-[#E5E7EB] p-8 md:p-10 flex flex-col justify-center">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center text-red-600">
+                <PhoneCall size={20} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 tracking-tight">Emergency Contact</h3>
+            </div>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[0.75rem] font-bold text-gray-400 uppercase tracking-widest mb-1">Contact Name / Relation</p>
+                  <p className="text-[1.25rem] font-black text-[#0F4D4A] uppercase">{user?.emergencyContactName || "NOT CONFIGURED"}</p>
+                </div>
+                <a href={`tel:${user?.emergencyContactPhone}`} className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 shadow-sm hover:bg-red-100 transition-all">
+                  <PhoneCall size={24} />
+                </a>
+              </div>
+              <div>
+                <p className="text-[0.75rem] font-bold text-gray-400 uppercase tracking-widest mb-1">Phone Number</p>
+                <p className="text-[1.5rem] font-mono font-black text-[#0F4D4A]">{user?.emergencyContactPhone || "--- --- ----"}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* QR Code */}
+          <div className="bg-[#0F4D4A] rounded-3xl p-8 md:p-10 text-white flex items-center gap-8 shadow-xl relative overflow-hidden group">
+            <div className="bg-white p-4 rounded-3xl shrink-0 shadow-2xl group-hover:scale-105 transition-transform duration-500 relative z-10">
+              <QRCodeCanvas value={publicLink || "emergency"} size={120} bgColor="#ffffff" fgColor="#000000" level="H" />
+            </div>
+            <div className="relative z-10">
+              <h3 className="text-2xl font-bold mb-2 tracking-tight">Digital QR Profile</h3>
+              <p className="text-[#CCFBF1] text-[1rem] leading-tight font-medium opacity-90 mb-6">
+                Scan to instantly unlock full clinical history and vital medical records.
+              </p>
+              <div className="inline-flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full text-[0.8rem] font-black uppercase tracking-widest border border-white/20">
+                 <ShieldCheck size={16} /> Secure Power Feature
+              </div>
+            </div>
+            <div className="absolute right-0 top-0 w-48 h-48 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+          </div>
+        </section>
+
+        {/* 4. Medical History (Bullet List) */}
+        <section className="bg-white rounded-3xl shadow-sm border border-[#E5E7EB] p-8 md:p-10 mb-10">
+          <div className="flex items-center gap-4 mb-10">
+            <div className="w-12 h-12 bg-[#F0FDFA] rounded-xl flex items-center justify-center text-[#0F766E]">
+              <History size={24} />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Clinical History</h3>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div>
+              <p className="text-[0.8rem] font-black text-[#0F766E] uppercase tracking-widest mb-6 border-l-4 border-[#0F766E] pl-4">Chronic Diseases</p>
+              <ul className="space-y-4">
+                {user?.diseases?.length > 0 ? user.diseases.map((d, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <div className="w-2 h-2 rounded-full bg-[#0F766E] mt-2 shrink-0"></div>
+                    <span className="text-[1.1rem] font-bold text-gray-900 uppercase leading-tight">{d}</span>
+                  </li>
+                )) : <li className="text-gray-400 italic">No chronic conditions reported.</li>}
+              </ul>
+            </div>
+            <div>
+              <p className="text-[0.8rem] font-black text-gray-400 uppercase tracking-widest mb-6 border-l-4 border-gray-200 pl-4">Past Major Illnesses</p>
+              <ul className="space-y-4">
+                {user?.pastIllnesses?.length > 0 ? user.pastIllnesses.map((d, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <div className="w-2 h-2 rounded-full bg-gray-300 mt-2 shrink-0"></div>
+                    <span className="text-[1.1rem] font-bold text-gray-600 uppercase leading-tight">{d}</span>
+                  </li>
+                )) : <li className="text-gray-400 italic">No major past illnesses recorded.</li>}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* 5. Current Medications (Keep only active medicines) */}
+        <section className="bg-white rounded-3xl shadow-sm border border-[#E5E7EB] p-8 md:p-10 mb-10">
+           <div className="flex justify-between items-center mb-8">
+             <div className="flex items-center gap-4">
+               <div className="w-10 h-10 bg-[#F0FDFA] rounded-xl flex items-center justify-center text-[#0F766E]">
+                 <Pill size={22} />
                </div>
+               <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Active Medications</h3>
              </div>
+             <span className="text-[0.7rem] font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-3 py-1 rounded-full">Active Dosage</span>
+           </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {medications.length > 0 ? medications.slice(0, 8).map((med) => (
+                <div key={med._id} className="flex gap-5 items-center bg-[#F8FAFC] border border-[#E5E7EB] p-5 rounded-2xl hover:bg-white hover:shadow-md transition-all group">
+                  <div className="w-16 h-16 rounded-2xl bg-white shadow-sm flex justify-center items-center shrink-0 text-[#0F766E] group-hover:scale-110 transition-transform">
+                    <Pill className="w-7 h-7" />
+                  </div>
+                  <div>
+                      <h5 className="font-bold text-gray-900 text-[1.1rem] uppercase">{med.name}</h5>
+                      <p className="text-[0.85rem] text-gray-500 font-bold uppercase tracking-widest mt-1">
+                        {med.strength || "N/A"} • {med.schedule?.join(", ") || "No schedule"}
+                      </p>
+                  </div>
+                </div>
+              )) : (
+                <div className="col-span-2 text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                  <p className="text-gray-400 italic">No active medications found.</p>
+                </div>
+              )}
+            </div>
+        </section>
+
+        {/* 6. Doctor / Notes (Optional) */}
+        <section className="bg-gray-50/50 rounded-[2.5rem] p-8 md:p-12 border border-dashed border-gray-200 mb-10">
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              <div>
+                 <p className="text-[0.8rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Primary Physician</p>
+                 <div className="flex items-center gap-5">
+                    <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center text-[#0F766E] shadow-sm">
+                       <Activity size={32} />
+                    </div>
+                    <div>
+                       <p className="text-[1.25rem] font-black text-[#0F4D4A] uppercase">{user?.primaryDoctor || "Not Assigned"}</p>
+                       <p className="text-[0.85rem] text-gray-400 font-bold uppercase tracking-wider">Board Certified MD</p>
+                    </div>
+                 </div>
+              </div>
+              <div>
+                 <p className="text-[0.8rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Special Instructions</p>
+                 <div className="bg-white/80 p-6 rounded-3xl shadow-sm min-h-[100px]">
+                    <p className="text-[1rem] font-medium text-gray-500 italic leading-relaxed">
+                       "{user?.specialNotes || "No specific instructions recorded for medical personnel in emergency situations."}"
+                    </p>
+                 </div>
+              </div>
            </div>
         </section>
 
-        {/* Two Column Layout for Middle Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-10">
-          
-          {/* Left Block -> Risk Assessment & Clinical Outlook */}
-          <div className="col-span-1 lg:col-span-2 space-y-10 flex flex-col">
-            
-            <div className="bg-white rounded-3xl shadow-sm border border-[#E5E7EB] p-6 md:p-10 flex-1">
-               <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-                 <div className="flex items-center gap-4">
-                   <div className="w-10 h-10 md:w-12 md:h-12 bg-[#F0FDFA] rounded-full flex items-center justify-center">
-                     <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-[#0F766E]" />
-                   </div>
-                   <h3 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">Risk Assessment</h3>
-                 </div>
-                 <span className="text-[0.7rem] md:text-[0.85rem] font-bold tracking-widest uppercase text-[#059669] bg-[#ecfdf5] px-3 md:px-4 py-1.5 md:py-2 rounded-xl flex items-center gap-2 self-start md:self-auto">
-                   <span className="w-2 h-2 rounded-full bg-[#059669] animate-pulse"></span> Active Analysis
-                 </span>
-               </div>
-               
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 {/* Gauge 1 */}
-                 <div className="bg-[#F8FAFC] border border-[#E5E7EB] p-6 rounded-3xl">
-                     <span className="block text-[0.8rem] uppercase font-bold tracking-widest text-gray-500 mb-6">Cardiovascular</span>
-                    <div className="flex items-end justify-between border-b border-[#E5E7EB] pb-3">
-                       <span className="text-4xl font-bold text-gray-900">74<span className="text-xl text-gray-400 ml-1">%</span></span>
-                       <span className="text-[0.75rem] font-bold text-[#DC2626] tracking-widest uppercase bg-[#FEF2F2] px-2 py-1 rounded-md">Elevated</span>
-                    </div>
-                    <div className="w-full h-2 bg-gray-200 mt-4 rounded-full overflow-hidden">
-                      <div className="h-full bg-[#DC2626] rounded-full transition-all duration-1000" style={{width: '74%'}}></div>
-                    </div>
-                 </div>
-
-                 {/* Gauge 2 */}
-                 <div className="bg-[#F8FAFC] border border-[#E5E7EB] p-6 rounded-3xl">
-                     <span className="block text-[0.8rem] uppercase font-bold tracking-widest text-gray-500 mb-6">Mobility Stability</span>
-                    <div className="flex items-end justify-between border-b border-[#E5E7EB] pb-3">
-                       <span className="text-4xl font-bold text-gray-900">12<span className="text-xl text-gray-400 ml-1">%</span></span>
-                       <span className="text-[0.75rem] font-bold text-[#059669] tracking-widest uppercase bg-[#ecfdf5] px-2 py-1 rounded-md">Minimal</span>
-                    </div>
-                    <div className="w-full h-2 bg-gray-200 mt-4 rounded-full overflow-hidden">
-                      <div className="h-full bg-[#059669] rounded-full transition-all duration-1000" style={{width: '12%'}}></div>
-                    </div>
-                 </div>
-
-                 {/* Gauge 3 */}
-                 <div className="bg-[#F8FAFC] border border-[#E5E7EB] p-6 rounded-3xl">
-                     <span className="block text-[0.8rem] uppercase font-bold tracking-widest text-gray-500 mb-6">Cognitive Health</span>
-                    <div className="flex items-end justify-between border-b border-[#E5E7EB] pb-3">
-                       <span className="text-4xl font-bold text-gray-900">38<span className="text-xl text-gray-400 ml-1">%</span></span>
-                       <span className="text-[0.75rem] font-bold text-[#0F766E] tracking-widest uppercase bg-[#F0FDFA] px-2 py-1 rounded-md">Baseline</span>
-                    </div>
-                    <div className="w-full h-2 bg-gray-200 mt-4 rounded-full overflow-hidden">
-                      <div className="h-full bg-[#0F766E] rounded-full transition-all duration-1000" style={{width: '38%'}}></div>
-                    </div>
-                 </div>
-               </div>
-            </div>
-
-            {/* Clinical Outlook Dark Box */}
-            <div className="bg-[#0F766E] rounded-3xl shadow-md p-8 md:p-10 flex flex-col md:flex-row gap-8 items-center overflow-hidden relative">
-               <div className="w-20 h-20 shrink-0 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md z-10">
-                 <TrendingUp className="w-8 h-8 text-white" />
-               </div>
-               <div className="z-10 text-center md:text-left">
-                  <h4 className="text-white font-bold text-[1.25rem] tracking-tight mb-2">Clinical Outlook</h4>
-                  <p className="text-blue-100 text-[1.05rem] leading-relaxed font-medium">
-                    Current trajectory shows positive stabilization in cardiovascular markers following medication adjustment. Continue monitoring hydration levels during activity.
-                  </p>
-               </div>
-               {/* Decor */}
-               <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none translate-x-1/2 -translate-y-1/2"></div>
-            </div>
-
-          </div>
-
-          {/* Right Block -> Medication List */}
-          <div className="col-span-1 bg-white rounded-3xl shadow-sm border border-[#E5E7EB] p-8 md:p-10 flex flex-col">
-             <div className="flex items-center gap-4 mb-8">
-               <div className="w-12 h-12 bg-[#F0FDFA] rounded-full flex items-center justify-center">
-                 <Pill className="w-6 h-6 text-[#0F766E]" />
-               </div>
-               <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Medications</h3>
-             </div>
-
-              <div className="space-y-6 flex-1">
-                {medications.length > 0 ? medications.map((med) => (
-                  <div key={med._id} className="flex gap-4 items-center bg-[#F8FAFC] border border-[#E5E7EB] p-4 rounded-2xl">
-                    <div className="w-14 h-14 rounded-2xl bg-white shadow-sm flex justify-center items-center shrink-0 text-[#0F766E]">
-                      <Pill className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <h5 className="font-bold text-gray-900 text-[1.05rem]">{med.name}</h5>
-                        <p className="text-[0.8rem] text-gray-500 font-bold uppercase tracking-widest mt-0.5">
-                          {med.strength || "N/A"} • {med.schedule?.join(", ") || "No schedule"}
-                        </p>
-                    </div>
-                  </div>
-                )) : (
-                  <div className="text-center py-6 text-gray-400 italic">No medications found.</div>
-                )}
-              </div>
-
-             <div className="mt-8 pt-6 border-t border-[#E5E7EB]">
-                 <button className="w-full bg-[#0F766E] hover:bg-[#047857] text-white py-4 rounded-2xl text-[1.05rem] font-bold transition-all flex items-center justify-center gap-2 shadow-md">
-                 <Printer className="w-5 h-5" /> Print Prescription
-               </button>
-             </div>
-          </div>
-          
-        </section>
+        {/* Action Bar */}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6 mt-12 pt-10 border-t border-[#E5E7EB]">
+           <p className="text-gray-400 text-[0.9rem] font-bold uppercase tracking-widest">Authenticated Dossier • MedSafe AI Clinical Engine</p>
+           <button onClick={() => window.print()} className="bg-[#0F766E] hover:bg-[#047857] text-white px-10 py-5 rounded-3xl text-[1.1rem] font-bold transition-all flex items-center justify-center gap-3 shadow-xl shadow-[#0F766E]/20">
+              <Printer className="w-6 h-6" /> Print Official Resume
+           </button>
+        </div>
 
         {/* Clinical Alerts History Table */}
         <section className="bg-white rounded-3xl shadow-sm border border-[#E5E7EB] p-6 md:p-10 overflow-hidden">

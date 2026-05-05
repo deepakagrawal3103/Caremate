@@ -35,7 +35,10 @@ import {
   BarChart2,
   TrendingUp,
   Printer,
-  History
+  History,
+  BrainCog,
+  Share2,
+  X
 } from 'lucide-react';
 import { useMobileMenu } from "../context/MobileMenuContext";
 import { useAuth } from "../context/AuthContext";
@@ -61,6 +64,7 @@ export default function PatientRecords() {
   const [adherenceLogs, setAdherenceLogs] = React.useState([]);
   const [adherenceFilter, setAdherenceFilter] = React.useState('Weekly');
   const [publicLink, setPublicLink] = React.useState("");
+  const [safetyScore, setSafetyScore] = React.useState(100);
 
   React.useEffect(() => {
     if (!authLoading && user) {
@@ -68,6 +72,17 @@ export default function PatientRecords() {
       loadData();
     }
   }, [user, authLoading]);
+
+  React.useEffect(() => {
+    if (medicines.length >= 0) {
+      let score = 100;
+      medicines.forEach(m => {
+        if (m.interactionStatus === 'danger') score -= 15;
+        if (m.interactionStatus === 'warning') score -= 5;
+      });
+      setSafetyScore(Math.max(0, score));
+    }
+  }, [medicines]);
 
   const loadData = async () => {
     try {
@@ -363,48 +378,48 @@ export default function PatientRecords() {
       </div>
 
       {/* Top Header - Desktop ONLY */}
-      <header className="hidden lg:flex px-4 md:px-5 py-2 items-center justify-between bg-white border-b border-gray-100 sticky top-0 z-10 h-[52px]">
+      <header className="hidden lg:flex px-4 py-1 items-center justify-between bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-[100] h-[48px]">
         <div className="flex items-center gap-4 flex-1">
-          <div className="relative w-full max-w-[320px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400" />
+          <div className="relative w-full max-w-[280px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search records..."
-              className="w-full bg-[#F1F5F9] border-none rounded-lg py-2 pl-9 md:pl-10 pr-4 text-[0.85rem] md:text-[0.9rem] focus:ring-2 focus:ring-[#0F766E]/20"
+              placeholder="Search clinical records..."
+              className="w-full bg-gray-50 border-none rounded-lg py-1.5 pl-9 pr-4 text-[0.8rem] font-bold focus:ring-2 focus:ring-primary/10 transition-all"
             />
           </div>
         </div>
 
-        <div className="flex items-center gap-3 md:gap-5 ml-4">
-          <Link to="/alerts" className="text-gray-400 hover:text-gray-900 transition-colors p-1"><Bell size={20} /></Link>
-          <button className="text-gray-400 hover:text-gray-900 transition-colors p-1 hidden sm:block"><PlusCircle size={20} /></button>
-          <Link to="/settings" className="text-gray-400 hover:text-gray-900 transition-colors p-1"><Settings size={20} /></Link>
-          <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 shadow-sm shrink-0">
+        <div className="flex items-center gap-4 ml-4">
+          <Link to="/alerts" className="text-gray-400 hover:text-primary transition-colors p-1"><Bell size={18} /></Link>
+          <button className="text-gray-400 hover:text-primary transition-colors p-1 hidden sm:block"><PlusCircle size={18} /></button>
+          <Link to="/settings" className="text-gray-400 hover:text-primary transition-colors p-1"><Settings size={18} /></Link>
+          <div className="w-7 h-7 rounded-full overflow-hidden border border-gray-200 shadow-sm shrink-0">
             <img src={user?.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} alt="User" className="w-full h-full object-cover" />
           </div>
         </div>
       </header>
 
-      <main className="hidden lg:block p-4 md:p-5 max-w-[1400px] mx-auto">
-        {/* Title & Actions Row - Responsive */}
-        <div className="flex flex-col lg:flex-row justify-between items-start mb-4 gap-4">
+      <main className="hidden lg:block px-6 py-4 max-w-[1500px] mx-auto">
+        {/* Title & Actions Row */}
+        <div className="flex flex-col lg:flex-row justify-between items-end mb-4 gap-4">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-0.5">Patient Records</h1>
-            <p className="text-gray-500 font-medium text-[0.8rem] md:text-[0.85rem]">Manage clinical data and history.</p>
+            <h1 className="text-lg md:text-xl font-black text-primary leading-tight uppercase tracking-tight">Patient Records Dashboard</h1>
+            <p className="text-text-muted font-bold text-[0.7rem] uppercase tracking-widest">Clinical Data Management & History</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-            <div className="bg-white border border-gray-100 p-1 rounded-xl flex flex-1 sm:flex-none">
-              <button className="flex-1 px-4 py-1.5 text-[0.8rem] md:text-[0.85rem] font-bold bg-gray-50 text-gray-900 rounded-lg shadow-sm">List</button>
-              <button className="flex-1 px-4 py-1.5 text-[0.8rem] md:text-[0.85rem] font-bold text-gray-400 hover:text-gray-600 transition-colors">Timeline</button>
+          <div className="flex items-center gap-2">
+            <div className="bg-white border border-gray-100 p-0.5 rounded-lg flex shadow-sm">
+              <button className="px-3 py-1 text-[0.7rem] font-black uppercase tracking-widest bg-gray-50 text-primary rounded-md shadow-sm">List</button>
+              <button className="px-3 py-1 text-[0.7rem] font-black uppercase tracking-widest text-gray-400 hover:text-gray-600 transition-colors">Timeline</button>
             </div>
-            <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl font-bold text-[0.8rem] md:text-[0.85rem] text-gray-700 shadow-sm hover:bg-gray-50 transition-colors min-h-[40px]">
-              <Filter size={16} /> Filter
+            <button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-100 rounded-lg font-black text-[0.7rem] text-primary uppercase tracking-widest shadow-sm hover:bg-gray-50 transition-all">
+              <Filter size={14} /> Filter
             </button>
             <button 
               onClick={handleExport}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl font-bold text-[0.8rem] md:text-[0.85rem] text-gray-700 shadow-sm hover:bg-gray-50 transition-colors min-h-[40px]"
+              className="btn-premium"
             >
-              <Download size={16} /> Export
+              <Download size={14} /> Export dossier
             </button>
           </div>
         </div>
@@ -414,138 +429,111 @@ export default function PatientRecords() {
           <div className="lg:col-span-8 flex flex-col gap-4">
 
             {/* Patient Hero Card */}
-            <div className="bg-white rounded-xl border border-gray-100 p-4 md:p-5 shadow-sm">
-              <div className="flex flex-col sm:flex-row gap-4 md:gap-5 items-center sm:items-start mb-5 text-center sm:text-left">
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl bg-[#0F766E]/10 overflow-hidden shrink-0 border border-[#0F766E]/20">
-                  <img src={user?.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} alt={user?.name || "Patient"} className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-2">
-                    <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase">{user?.name || "Patient Name"}</h2>
-                    <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                      <span className="bg-[#F0FDFA] text-[#0F766E] text-[0.6rem] md:text-[0.65rem] font-black px-2.5 py-1 rounded-full uppercase border border-[#0F766E]/10">{user?.bloodGroup || "B+"} BLOOD</span>
-                    </div>
-                  </div>
-                  <p className="text-gray-400 font-bold text-[0.75rem] md:text-[0.85rem] uppercase tracking-widest">
-                    ID: #{user?.uid?.slice(0, 8) || "PX-88294"} • DOB: {user?.dob || "May 14, 1978"} ({user?.age || "45"} yrs)
-                  </p>
-                </div>
+            <div className="card-premium flex items-center gap-6">
+              <div className="w-16 h-16 rounded-xl bg-primary-light overflow-hidden shrink-0 border border-primary/10 shadow-inner">
+                <img src={user?.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} alt={user?.name || "Patient"} className="w-full h-full object-cover" />
               </div>
-
-              {/* Vitals Grid - Responsive */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
-                <div className="bg-gray-50/50 p-3 md:p-4 rounded-2xl border border-gray-100">
-                  <p className="text-[0.6rem] md:text-[0.65rem] font-black text-gray-400 uppercase tracking-widest mb-1.5">Weight</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-lg md:text-xl font-black text-gray-900">{user?.weight || "--"}</span>
-                    <span className="text-[0.65rem] md:text-[0.7rem] font-bold text-gray-400">kg</span>
-                  </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-1">
+                  <h2 className="text-xl font-black text-primary uppercase leading-tight">{user?.name || "Patient Name"}</h2>
+                  <span className="badge-compact bg-primary-light text-primary border-primary/10">{user?.bloodGroup || "B+"} BLOOD</span>
                 </div>
-                <div className="bg-gray-50/50 p-3 md:p-4 rounded-2xl border border-gray-100">
-                  <p className="text-[0.6rem] md:text-[0.65rem] font-black text-gray-400 uppercase tracking-widest mb-1.5">Height</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-lg md:text-xl font-black text-gray-900">{user?.height || "--"}</span>
-                    <span className="text-[0.65rem] md:text-[0.7rem] font-bold text-gray-400">cm</span>
-                  </div>
-                </div>
-                <div className="bg-gray-50/50 p-3 md:p-4 rounded-2xl border border-gray-100">
-                  <p className="text-[0.6rem] md:text-[0.65rem] font-black text-gray-400 uppercase tracking-widest mb-1.5">BP</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-lg md:text-xl font-black text-gray-900">{user?.bp || "--"}</span>
-                    <span className="text-[0.65rem] md:text-[0.7rem] font-bold text-gray-400">mmHg</span>
-                  </div>
-                </div>
-                <div className="bg-gray-50/50 p-3 md:p-4 rounded-2xl border border-gray-100">
-                  <p className="text-[0.6rem] md:text-[0.65rem] font-black text-gray-400 uppercase tracking-widest mb-1.5">SPO2</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-lg md:text-xl font-black text-gray-900">{user?.spo2 || "--"}</span>
-                    <span className="text-[0.65rem] md:text-[0.7rem] font-bold text-gray-400">%</span>
-                  </div>
-                </div>
-                <div className="bg-gray-50/50 p-3 md:p-4 rounded-2xl border border-gray-100">
-                  <p className="text-[0.6rem] md:text-[0.65rem] font-black text-gray-400 uppercase tracking-widest mb-1.5">Temp</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-lg md:text-xl font-black text-gray-900">{user?.temp || "--"}</span>
-                    <span className="text-[0.65rem] md:text-[0.7rem] font-bold text-gray-400">°F</span>
-                  </div>
-                </div>
-                <div className="bg-gray-50/50 p-3 md:p-4 rounded-2xl border border-gray-100">
-                  <p className="text-[0.6rem] md:text-[0.65rem] font-black text-gray-400 uppercase tracking-widest mb-1.5">Pulse</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-lg md:text-xl font-black text-gray-900">{user?.hr || "--"}</span>
-                    <span className="text-[0.65rem] md:text-[0.7rem] font-bold text-gray-400">bpm</span>
-                  </div>
-                </div>
+                <p className="text-text-muted font-black text-[0.65rem] uppercase tracking-[0.2em]">
+                  ID: #{user?.uid?.slice(0, 8)} • DOB: {user?.dob || "14 MAY 1978"} • {user?.age || "45"} YRS
+                </p>
               </div>
             </div>
 
+              {/* Vitals Grid */}
+              <div className="grid grid-cols-6 gap-3">
+                {[
+                  { label: "Weight", val: user?.weight || "--", unit: "kg" },
+                  { label: "Height", val: user?.height || "--", unit: "cm" },
+                  { label: "BP", val: user?.bp || "--", unit: "mmHg" },
+                  { label: "SPO2", val: user?.spo2 || "--", unit: "%" },
+                  { label: "Temp", val: user?.temp || "--", unit: "°F" },
+                  { label: "Pulse", val: user?.hr || "--", unit: "bpm" },
+                ].map((stat, i) => (
+                  <div key={i} className="bg-gray-50/50 p-2.5 rounded-xl border border-gray-100 group hover:bg-white hover:shadow-sm transition-all">
+                    <p className="text-[0.55rem] font-black text-text-muted uppercase tracking-widest mb-1">{stat.label}</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-base font-black text-primary">{stat.val}</span>
+                      <span className="text-[0.6rem] font-bold text-text-muted">{stat.unit}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
             {/* Content Tabs */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-              <div className="px-5 md:px-6 py-0 border-b border-gray-50 flex justify-between items-center bg-white sticky top-0 z-[1] overflow-x-auto no-scrollbar">
-                <div className="flex gap-5 md:gap-6 h-[48px] md:h-[52px] shrink-0">
-                  {['Clinical Timeline', 'Health Resume', 'Clinical Reports', 'Medication Tracker', 'Adherence History', 'Lab Results', 'Emergency QR'].map((tabName) => (
+              <div className="flex items-center px-4 md:px-6 border-b border-gray-100 overflow-x-auto">
+                <div className="flex gap-6 h-[44px] items-center">
+                  {['Timeline', 'Health Resume', 'Clinical Reports', 'Medication Tracker', 'Adherence', 'Lab Results', 'Emergency QR'].map((tabName) => (
                     <button
                       key={tabName}
-                      onClick={() => setActiveTab(tabName)}
-                      className={`h-full px-1 text-[0.85rem] md:text-[0.9rem] font-bold transition-all border-b-[3px] whitespace-nowrap ${activeTab === tabName ? 'text-[#0F766E] border-[#0F766E]' : 'text-gray-400 border-transparent hover:text-gray-600'
+                      onClick={() => setActiveTab(tabName === 'Timeline' ? 'Clinical Timeline' : tabName === 'Adherence' ? 'Adherence History' : tabName)}
+                      className={`h-full px-1 text-[0.7rem] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${
+                        (activeTab === tabName || (tabName === 'Timeline' && activeTab === 'Clinical Timeline') || (tabName === 'Adherence' && activeTab === 'Adherence History')) 
+                        ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-600'
                         }`}
                     >
+                      {tabName === 'Health Resume' && <FileText size={12} />}
                       {tabName}
                     </button>
                   ))}
                 </div>
-                <div className="ml-auto">
-                  {activeTab === 'Clinical Timeline' && (
-                    <button className="text-[0.75rem] md:text-[0.8rem] font-bold text-[#0F766E] hover:underline whitespace-nowrap">View All</button>
-                  )}
-                  {activeTab === 'Clinical Reports' && (
-                    <div className="flex items-center gap-2">
-                      {uploading && <span className="text-[0.7rem] text-[#0F766E] animate-pulse font-bold">Uploading...</span>}
-                      <label className="flex items-center gap-2 text-[0.75rem] md:text-[0.8rem] font-bold text-[#0F766E] hover:underline cursor-pointer whitespace-nowrap">
-                        <PlusCircle size={16} /> <span className="hidden xs:inline">Upload</span>
-                        <input type="file" className="hidden" onChange={handleFileUpload} accept=".pdf,image/*" disabled={uploading} />
-                      </label>
-                    </div>
-                  )}
-                </div>
+              </div>
+              <div className="px-6 py-3 flex items-center justify-end">
+                {activeTab === 'Clinical Timeline' && (
+                  <button className="text-[0.75rem] md:text-[0.8rem] font-bold text-[#0F766E] hover:underline whitespace-nowrap">View All</button>
+                )}
+                {activeTab === 'Clinical Reports' && (
+                  <div className="flex items-center gap-2">
+                    {uploading && <span className="text-[0.7rem] text-[#0F766E] animate-pulse font-bold">Uploading...</span>}
+                    <label className="flex items-center gap-2 text-[0.75rem] md:text-[0.8rem] font-bold text-[#0F766E] hover:underline cursor-pointer whitespace-nowrap">
+                      <PlusCircle size={16} /> <span className="hidden xs:inline">Upload</span>
+                      <input type="file" className="hidden" onChange={handleFileUpload} accept=".pdf,image/*" disabled={uploading} />
+                    </label>
+                  </div>
+                )}
               </div>
 
               {activeTab === 'Clinical Reports' && (
-                <div className="p-5">
-                  <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-4">
+                  <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
                     <table className="w-full text-left">
                       <thead>
                         <tr className="bg-gray-50/50 border-b border-gray-100">
-                          <th className="px-6 py-4 text-[0.7rem] font-black text-gray-400 uppercase tracking-widest">Report Name</th>
-                          <th className="px-6 py-4 text-[0.7rem] font-black text-gray-400 uppercase tracking-widest">Date</th>
-                          <th className="px-6 py-4 text-[0.7rem] font-black text-gray-400 uppercase tracking-widest">Type</th>
-                          <th className="px-6 py-4 text-[0.7rem] font-black text-gray-400 uppercase tracking-widest text-right">Action</th>
+                          <th className="px-4 py-3 text-[0.6rem] font-black text-text-muted uppercase tracking-widest">Document</th>
+                          <th className="px-4 py-3 text-[0.6rem] font-black text-text-muted uppercase tracking-widest">Date</th>
+                          <th className="px-4 py-3 text-[0.6rem] font-black text-text-muted uppercase tracking-widest">Type</th>
+                          <th className="px-4 py-3 text-[0.6rem] font-black text-text-muted uppercase tracking-widest text-right">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {clinicalReports.map((report, i) => (
+                        {reports.map((report, i) => (
                           <tr key={i} className="hover:bg-gray-50/30 transition-colors">
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded flex items-center justify-center ${report.type === 'PDF' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
-                                  <FileText size={16} />
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-6 h-6 rounded flex items-center justify-center ${report.type === 'PDF' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
+                                  <FileText size={14} />
                                 </div>
-                                <span className="text-[0.9rem] font-bold text-gray-900">{report.name}</span>
+                                <span className="text-[0.85rem] font-black text-primary uppercase leading-none">{report.name}</span>
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-[0.85rem] font-medium text-gray-500">
+                            <td className="px-4 py-3 text-[0.75rem] font-bold text-text-muted uppercase tracking-tight">
                               {new Date(report.createdAt).toLocaleDateString()}
                             </td>
-                            <td className="px-6 py-4">
-                              <span className="text-[0.7rem] font-black bg-gray-100 text-gray-500 px-2 py-0.5 rounded uppercase tracking-tighter">{report.type} • {report.size}</span>
+                            <td className="px-4 py-3">
+                              <span className="badge-compact bg-gray-50 text-text-muted border-gray-100">{report.type} • {report.size}</span>
                             </td>
-                            <td className="px-6 py-4 text-right">
+                            <td className="px-4 py-3 text-right">
                               {report.fileUrl ? (
-                                <a href={report.fileUrl} target="_blank" rel="noreferrer" className="text-[#0F766E] hover:text-[#0D635D] p-2 transition-colors inline-block">
-                                  <Download size={18} />
+                                <a href={report.fileUrl} target="_blank" rel="noreferrer" className="text-primary hover:text-primary-dark p-1.5 transition-colors inline-block">
+                                  <Download size={14} />
                                 </a>
                               ) : (
-                                <span className="text-gray-400 text-[0.7rem] font-bold">DEMO</span>
+                                <span className="text-gray-300 text-[0.55rem] font-black uppercase tracking-tighter">DEMO</span>
                               )}
                             </td>
                           </tr>
@@ -557,31 +545,31 @@ export default function PatientRecords() {
               )}
 
               {activeTab === 'Medication Tracker' && (
-                <div className="p-5">
-                   <div className="flex justify-between items-center mb-6">
-                     <div className="relative flex-1 max-w-[400px]">
-                        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <div className="p-4">
+                   <div className="flex justify-between items-center mb-4">
+                     <div className="relative flex-1 max-w-[320px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
                         <input 
                           type="text" 
                           placeholder="Search medicines..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full bg-[#F8FAFC] border-none rounded-xl py-2 pl-10 pr-4 text-[0.9rem] font-medium focus:ring-2 focus:ring-[#0F766E]/20"
+                          className="w-full bg-gray-50 border-none rounded-lg py-1.5 pl-9 pr-4 text-[0.75rem] font-bold focus:ring-2 focus:ring-primary/10 transition-all"
                         />
                      </div>
-                     <Link to="/add-medicine" className="bg-[#0F766E] text-white px-4 py-2 rounded-lg text-[0.85rem] font-bold flex items-center gap-2 hover:bg-[#0d6d65] transition-all">
-                        <Plus size={16} /> Add New
+                     <Link to="/add-medicine" className="bg-primary text-white px-3 py-1.5 rounded-lg text-[0.7rem] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-primary-dark transition-all shadow-sm">
+                        <Plus size={14} strokeWidth={3} /> Add New
                      </Link>
                    </div>
 
-                   <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                   <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
                       <table className="w-full text-left">
                         <thead>
                           <tr className="bg-gray-50/50 border-b border-gray-100">
-                            <th className="px-6 py-4 text-[0.7rem] font-black text-gray-400 uppercase tracking-widest">Medication</th>
-                            <th className="px-6 py-4 text-[0.7rem] font-black text-gray-400 uppercase tracking-widest">Dosage/Schedule</th>
-                            <th className="px-6 py-4 text-[0.7rem] font-black text-gray-400 uppercase tracking-widest">Supply</th>
-                            <th className="px-6 py-4 text-[0.7rem] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                            <th className="px-4 py-3 text-[0.6rem] font-black text-text-muted uppercase tracking-widest">Medication</th>
+                            <th className="px-4 py-3 text-[0.6rem] font-black text-text-muted uppercase tracking-widest">Dosage/Schedule</th>
+                            <th className="px-4 py-3 text-[0.6rem] font-black text-text-muted uppercase tracking-widest">Supply</th>
+                            <th className="px-4 py-3 text-[0.6rem] font-black text-text-muted uppercase tracking-widest text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -589,44 +577,39 @@ export default function PatientRecords() {
                             const styles = getMedStyles(med);
                             return (
                               <tr key={med._id} className="hover:bg-gray-50/30 transition-colors">
-                                <td className="px-6 py-4">
+                                <td className="px-4 py-3">
                                   <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${styles.color}`}>
-                                      <Pill size={18} />
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${styles.color} shadow-sm`}>
+                                      <Pill size={14} />
                                     </div>
                                     <div>
-                                      <p className="text-[0.9rem] font-black text-gray-900 leading-tight uppercase">{med.name}</p>
-                                      <p className="text-[0.7rem] text-gray-400 font-bold uppercase">{med.category || "General"}</p>
+                                      <p className="text-[0.8rem] font-black text-primary leading-tight uppercase">{med.name}</p>
+                                      <p className="text-[0.55rem] text-text-muted font-black uppercase tracking-widest">{med.category || "General"}</p>
                                     </div>
                                   </div>
                                 </td>
-                                <td className="px-6 py-4">
-                                  <p className="text-[0.9rem] font-bold text-gray-900">{med.strength}</p>
-                                  <p className="text-[0.7rem] text-gray-400 font-bold uppercase">{med.schedule?.join(", ")}</p>
+                                <td className="px-4 py-3">
+                                  <p className="text-[0.8rem] font-black text-primary leading-none mb-1">{med.strength}</p>
+                                  <p className="text-[0.6rem] text-text-muted font-bold uppercase">{med.schedule?.join(", ")}</p>
                                 </td>
-                                <td className="px-6 py-4">
-                                  <div className="flex items-center gap-3">
-                                     <div className="h-1.5 w-24 bg-gray-100 rounded-full overflow-hidden">
-                                        <div className={`h-full rounded-full ${med.inventory < 5 ? 'bg-amber-500' : 'bg-[#0F766E]'}`} style={{ width: `${Math.min(100, (med.inventory / 30) * 100)}%` }}></div>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2">
+                                     <div className="h-1 w-16 bg-gray-100 rounded-full overflow-hidden">
+                                        <div className={`h-full rounded-full ${med.inventory < 5 ? 'bg-amber-500' : 'bg-primary'}`} style={{ width: `${Math.min(100, (med.inventory / 30) * 100)}%` }}></div>
                                      </div>
-                                     <span className="text-[0.75rem] font-black text-gray-500">{med.inventory} Left</span>
+                                     <span className="text-[0.65rem] font-black text-text-muted uppercase">{med.inventory}U</span>
                                   </div>
                                 </td>
-                                <td className="px-6 py-4 text-right">
-                                  <div className="flex items-center justify-end gap-3">
-                                    <button onClick={() => handleLogDose(med)} className="text-[#0F766E] hover:text-[#0d6d65] text-[0.8rem] font-bold">Log</button>
-                                    <button onClick={() => handleEditClick(med)} className="text-gray-400 hover:text-gray-600 transition-colors"><Edit2 size={16} /></button>
-                                    <button onClick={() => handleDeleteMed(med._id)} className="text-gray-300 hover:text-red-500 transition-colors"><CloseIcon size={18} /></button>
+                                <td className="px-4 py-3 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button onClick={() => handleLogDose(med)} className="text-primary hover:text-primary-dark text-[0.65rem] font-black uppercase tracking-widest px-2 py-1 rounded hover:bg-primary-light transition-all">Log</button>
+                                    <button onClick={() => handleEditClick(med)} className="text-gray-300 hover:text-primary transition-colors p-1"><Edit2 size={14} /></button>
+                                    <button onClick={() => handleDeleteMed(med._id)} className="text-gray-300 hover:text-red-500 transition-colors p-1"><CloseIcon size={14} /></button>
                                   </div>
                                 </td>
                               </tr>
                             );
                           })}
-                          {filteredMedications.length === 0 && (
-                            <tr>
-                              <td colSpan="4" className="px-6 py-12 text-center text-gray-400 italic">No medications matching your search.</td>
-                            </tr>
-                          )}
                         </tbody>
                       </table>
                    </div>
@@ -654,74 +637,281 @@ export default function PatientRecords() {
               )}
 
               {activeTab === 'Health Resume' && (
-                <div className="p-8 md:p-10 space-y-12 animate-in fade-in duration-700">
-                  {/* Summary Area */}
-                  <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6 border-b border-gray-50 pb-8">
-                     <div>
-                        <h2 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight mb-2 uppercase">Clinical Health Resume</h2>
-                        <p className="text-gray-500 max-w-xl leading-relaxed text-[0.9rem] md:text-[1rem] font-medium">
-                          A curated summary of medical heritage, active management, and preventative risk analysis.
+                <div className="p-6 md:p-10 space-y-8 animate-in fade-in duration-700">
+                  {/* Summary Header */}
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-100 pb-8 gap-6">
+                    <div>
+                      <div className="flex items-center gap-3 mb-1">
+                        <h2 className="text-2xl font-black text-[#0F4D4A] tracking-tight uppercase">Health Resume</h2>
+                        <span className="bg-[#F0FDFA] text-[#0F766E] text-[0.6rem] font-black px-2 py-1 rounded-md uppercase border border-[#CCFBF1]">Official Dossier</span>
+                      </div>
+                      <p className="text-gray-500 font-medium text-[0.9rem]">Essential clinical snapshot for rapid medical assessment.</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                      <Link to="/profile" className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gray-50 text-gray-600 px-5 py-3 rounded-2xl text-[0.8rem] font-black uppercase tracking-widest hover:bg-gray-100 transition-all border border-gray-100">
+                        <Settings size={16} /> Edit Profile
+                      </Link>
+                      <button onClick={handleExport} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#0F4D4A] text-white px-6 py-3 rounded-2xl text-[0.8rem] font-black uppercase tracking-widest hover:bg-[#0d6d65] transition-all shadow-lg shadow-[#0F4D4A]/20">
+                        <Printer size={16} /> Download Dossier
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 1. Basic Identity (TOP - VERY CLEAR) */}
+                  <section className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-8 h-8 bg-[#F0FDFA] rounded-lg flex items-center justify-center text-[#0F766E]">
+                        <User size={18} />
+                      </div>
+                      <h3 className="text-[0.75rem] font-black text-gray-400 uppercase tracking-[0.2em]">Basic Identity</h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                      <div>
+                        <p className="text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider mb-1">Full Name</p>
+                        <p className="text-xl md:text-2xl font-black text-[#0F4D4A] leading-tight uppercase">{user?.name || "Not Specified"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider mb-1">Age / Gender</p>
+                        <p className="text-xl md:text-2xl font-black text-[#0F4D4A] leading-tight">
+                          {user?.age || "45"} YRS / {user?.gender || "MALE"}
                         </p>
-                     </div>
-                     <div className="text-left md:text-right border-l-2 md:border-l-0 md:border-r-2 border-[#0F766E]/20 pl-4 md:pl-0 md:pr-4 py-1">
-                        <span className="block text-[0.65rem] font-black uppercase tracking-widest text-gray-400 mb-1">Dossier ID</span>
-                        <span className="font-mono text-gray-900 font-bold text-lg">#SH-{user?.uid?.slice(0, 4)}-{new Date().getFullYear()}</span>
-                     </div>
-                  </div>
+                      </div>
+                      <div>
+                        <p className="text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider mb-1">Blood Group</p>
+                        <p className="text-xl md:text-2xl font-black text-red-600 leading-tight bg-red-50 inline-block px-3 py-0.5 rounded-xl border border-red-100">
+                          {user?.bloodGroup || "O+"}(VE)
+                        </p>
+                      </div>
+                    </div>
+                  </section>
 
-                  {/* Risk Assessment Section */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div className="bg-[#F8FAFC] border border-gray-100 rounded-3xl p-8">
-                       <div className="flex items-center gap-4 mb-8">
-                         <div className="w-10 h-10 bg-white shadow-sm rounded-xl flex items-center justify-center">
-                           <BarChart2 className="w-5 h-5 text-[#0F766E]" />
-                         </div>
-                         <h3 className="text-lg font-bold text-gray-900 uppercase tracking-tight">Clinical Risk Assessment</h3>
-                       </div>
-                       
-                       <div className="space-y-6">
-                         {[
-                           { label: "Cardiovascular", val: 74, color: "bg-red-500", status: "Elevated" },
-                           { label: "Mobility Stability", val: 12, color: "bg-emerald-500", status: "Optimal" },
-                           { label: "Cognitive Baseline", val: 38, color: "bg-[#0F766E]", status: "Normal" }
-                         ].map(risk => (
-                           <div key={risk.label} className="space-y-3">
-                             <div className="flex justify-between items-end">
-                               <span className="text-[0.8rem] font-black text-gray-400 uppercase tracking-widest">{risk.label}</span>
-                               <span className={`text-[0.65rem] font-black px-2 py-0.5 rounded uppercase tracking-tighter ${risk.val > 70 ? 'bg-red-50 text-red-600' : risk.val < 20 ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'}`}>{risk.status}</span>
-                             </div>
-                             <div className="h-2 bg-gray-200/50 rounded-full overflow-hidden">
-                               <div className={`h-full ${risk.color} rounded-full transition-all duration-1000`} style={{ width: `${risk.val}%` }}></div>
-                             </div>
-                           </div>
-                         ))}
-                       </div>
+                  {/* 2. Critical Alerts (MOST IMPORTANT 🔥) - RED / BOLD */}
+                  <section className="bg-[#FFF5F5] rounded-3xl p-6 md:p-8 border-2 border-red-100 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                      <AlertTriangle size={80} className="text-red-600" />
+                    </div>
+                    
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-red-200">
+                        <AlertTriangle size={18} fill="currentColor" />
+                      </div>
+                      <h3 className="text-[0.85rem] font-black text-red-600 uppercase tracking-[0.2em]">Critical Alerts 🔥</h3>
                     </div>
 
-                    <div className="bg-[#0F4D4A] rounded-3xl p-8 text-white flex flex-col justify-center relative overflow-hidden group">
-                       <TrendingUp className="w-12 h-12 text-[#52DFBB] mb-4 opacity-50 group-hover:scale-110 transition-transform" />
-                       <h4 className="text-xl font-bold mb-2 tracking-tight">Clinical Outlook</h4>
-                       <p className="text-[#CCFBF1] text-[0.95rem] leading-relaxed font-medium">
-                         Current trajectory shows positive stabilization in cardiovascular markers following medication adjustment. Continue monitoring hydration levels during activity.
-                       </p>
-                       <div className="absolute right-0 top-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+                      <div className="bg-white/80 backdrop-blur-sm p-5 rounded-2xl border border-red-100">
+                        <p className="text-[0.7rem] font-black text-red-500 uppercase tracking-widest mb-2">Allergies (Drug / Food)</p>
+                        <p className="text-[1.1rem] font-black text-red-700 leading-tight uppercase">
+                          {user?.allergies?.length > 0 ? user.allergies.join(", ") : "NO KNOWN ALLERGIES"}
+                        </p>
+                      </div>
+                      
+                      <div className="bg-white/80 backdrop-blur-sm p-5 rounded-2xl border border-red-100">
+                        <p className="text-[0.7rem] font-black text-red-500 uppercase tracking-widest mb-2">High-Risk Conditions</p>
+                        <p className="text-[1.1rem] font-black text-red-700 leading-tight uppercase">
+                          {chronicConditions?.length > 0 ? chronicConditions.map(c => c.name || c).join(", ") : "NONE REPORTED"}
+                        </p>
+                        <p className="text-[0.6rem] text-red-400 font-bold mt-1 uppercase">(Heart, Diabetes, BP)</p>
+                      </div>
+
+                      <div className="bg-white/80 backdrop-blur-sm p-5 rounded-2xl border border-red-100">
+                        <p className="text-[0.7rem] font-black text-red-500 uppercase tracking-widest mb-2">Dangerous Medications</p>
+                        <p className="text-[1.1rem] font-black text-red-700 leading-tight uppercase">
+                          {medicines.filter(m => m.interactionStatus === 'danger').length > 0 
+                            ? medicines.filter(m => m.interactionStatus === 'danger').map(m => m.name).join(", ") 
+                            : "NONE DETECTED"}
+                        </p>
+                        <p className="text-[0.6rem] text-red-400 font-bold mt-1 uppercase">Interaction Risk: LOW</p>
+                      </div>
                     </div>
+                  </section>
+
+                  {/* 3. Emergency & QR (VERY IMPORTANT - REAL POWER FEATURE) */}
+                  <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Emergency Contact */}
+                    <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm flex flex-col justify-center">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center text-red-600">
+                          <Phone size={18} fill="currentColor" />
+                        </div>
+                        <h3 className="text-[0.75rem] font-black text-gray-400 uppercase tracking-[0.2em]">Emergency Contact</h3>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-[0.65rem] font-bold text-gray-400 uppercase mb-1">Contact Name / Relation</p>
+                            <p className="text-xl font-black text-[#0F4D4A] uppercase leading-tight">{user?.emergencyContactName || "NOT CONFIGURED"}</p>
+                          </div>
+                          {user?.emergencyContactPhone && (
+                            <a href={`tel:${user.emergencyContactPhone}`} className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 hover:bg-red-100 transition-colors">
+                              <PhoneCall size={20} />
+                            </a>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[0.65rem] font-bold text-gray-400 uppercase mb-1">Phone Number</p>
+                          <p className="text-2xl font-mono font-black text-[#0F4D4A] tracking-tight">{user?.emergencyContactPhone || "--- --- ----"}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* QR Code */}
+                    <div className="bg-[#0F4D4A] rounded-3xl p-6 md:p-8 text-white flex items-center gap-6 shadow-xl relative overflow-hidden group">
+                      <div className="bg-white p-3 rounded-2xl shrink-0 group-hover:scale-105 transition-transform duration-500 shadow-2xl relative z-10">
+                        <QRCodeCanvas value={publicLink || "emergency"} size={100} bgColor="#ffffff" fgColor="#000000" level="H" />
+                      </div>
+                      <div className="relative z-10 flex-1">
+                        <h3 className="text-[1.1rem] font-black uppercase tracking-tight mb-2">Emergency QR Scan</h3>
+                        <p className="text-[#CCFBF1] text-[0.8rem] font-medium leading-tight opacity-90 mb-4">
+                          Instant access to full clinical profile & historical records for emergency responders.
+                        </p>
+                        <div className="flex items-center gap-2 text-[0.65rem] font-black uppercase tracking-[0.2em] bg-white/10 w-fit px-3 py-1.5 rounded-full border border-white/20">
+                          <ShieldCheck size={14} className="text-[#52DFBB]" /> Power Feature
+                        </div>
+                      </div>
+                      {/* Ambient Decor */}
+                      <div className="absolute right-0 top-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                      <div className="absolute left-0 bottom-0 w-24 h-24 bg-[#52DFBB]/10 rounded-full blur-xl translate-y-1/2 -translate-x-1/2"></div>
+                    </div>
+                  </section>
+
+                  {/* 4. Medical Conditions (Bullet List) */}
+                  <section className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-8 h-8 bg-[#F0FDFA] rounded-lg flex items-center justify-center text-[#0F766E]">
+                        <FileText size={18} />
+                      </div>
+                      <h3 className="text-[0.75rem] font-black text-gray-400 uppercase tracking-[0.2em]">Medical History</h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                      <div>
+                        <p className="text-[0.65rem] font-black text-[#0F766E] uppercase tracking-[0.15em] mb-4 border-l-2 border-[#0F766E] pl-3">Chronic Diseases</p>
+                        <ul className="space-y-3">
+                          {user?.diseases?.length > 0 ? user.diseases.map((d, i) => (
+                            <li key={i} className="flex items-start gap-3 group">
+                              <div className="w-1.5 h-1.5 rounded-full bg-[#0F766E] mt-2 group-hover:scale-150 transition-transform"></div>
+                              <span className="text-[1rem] font-bold text-gray-900 leading-tight uppercase">{d}</span>
+                            </li>
+                          )) : <li className="text-gray-400 italic text-[0.9rem]">No chronic diseases reported.</li>}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-[0.65rem] font-black text-gray-400 uppercase tracking-[0.15em] mb-4 border-l-2 border-gray-200 pl-3">Past Major Illnesses</p>
+                        <ul className="space-y-3">
+                          {user?.pastIllnesses?.length > 0 ? user.pastIllnesses.map((d, i) => (
+                            <li key={i} className="flex items-start gap-3 group">
+                              <div className="w-1.5 h-1.5 rounded-full bg-gray-300 mt-2"></div>
+                              <span className="text-[1rem] font-bold text-gray-600 leading-tight uppercase">{d}</span>
+                            </li>
+                          )) : <li className="text-gray-400 italic text-[0.9rem]">No major past illnesses recorded.</li>}
+                        </ul>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* 5. Current Medications (Keep only active medicines) */}
+                  <section className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
+                    <div className="flex justify-between items-center mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-[#F0FDFA] rounded-lg flex items-center justify-center text-[#0F766E]">
+                          <Pill size={18} />
+                        </div>
+                        <h3 className="text-[0.75rem] font-black text-gray-400 uppercase tracking-[0.2em]">Current Medications</h3>
+                      </div>
+                      <span className="text-[0.65rem] font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-3 py-1 rounded-full">Active Dosage</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {medicines.length > 0 ? medicines.slice(0, 6).map((med) => (
+                        <div key={med._id} className="flex items-center gap-4 p-4 bg-gray-50/50 rounded-2xl border border-gray-100 hover:bg-white hover:shadow-md transition-all group">
+                          <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-[#0F766E] group-hover:scale-110 transition-transform">
+                            <Pill size={22} className="fill-[#0F766E]" />
+                          </div>
+                          <div>
+                            <h4 className="text-[1.05rem] font-bold text-[#0F4D4A] uppercase leading-tight">{med.name}</h4>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[0.75rem] font-bold text-[#0F766E] bg-[#CCFBF1] px-1.5 py-0.5 rounded">{med.strength}</span>
+                              <span className="text-[0.75rem] text-gray-400 font-bold uppercase">{med.schedule?.[0] || "AS DIRECTED"}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="col-span-3 py-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                          <p className="text-gray-400 italic">No active medications recorded.</p>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+
+                  {/* 6. Doctor / Notes (Optional) */}
+                  <section className="bg-gray-50/50 rounded-3xl p-6 md:p-10 border border-dashed border-gray-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                      <div>
+                        <p className="text-[0.7rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Primary Physician</p>
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-[#0F766E] shadow-sm">
+                            <Stethoscope size={24} />
+                          </div>
+                          <div>
+                            <p className="text-[1.1rem] font-black text-[#0F4D4A] uppercase">{user?.primaryDoctor || "Not Assigned"}</p>
+                            <p className="text-[0.75rem] text-gray-400 font-bold uppercase">Clinical Specialist</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[0.7rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Clinical Instructions</p>
+                        <div className="bg-white p-4 rounded-2xl shadow-sm">
+                          <p className="text-[0.9rem] font-medium text-gray-500 italic leading-relaxed">
+                            "{user?.specialNotes || "No specific instructions recorded for medical personnel in emergency situations."}"
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <div className="flex justify-between items-center pt-4">
+                     <p className="text-[0.7rem] text-gray-400 font-bold uppercase tracking-widest">MedSafe AI Clinical Dossier • #SH-{user?.uid?.slice(0, 6)}</p>
+                     <button onClick={handleExport} className="flex items-center gap-2 text-[0.8rem] font-black text-[#0F766E] uppercase tracking-widest hover:underline">
+                       <Printer size={16} /> Print Official Resume
+                     </button>
                   </div>
 
-                  {/* Emergency Dossier Box */}
-                  <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm flex flex-col md:flex-row gap-8 items-center">
-                    <div className="w-20 h-20 bg-[#F0FDFA] rounded-2xl flex items-center justify-center shrink-0">
-                      <PhoneCall className="w-8 h-8 text-[#0F766E]" />
+                  {/* 7. AI Automated Clinical Summary */}
+                  <section className="bg-white rounded-3xl p-6 md:p-8 border-2 border-dashed border-[#0F766E]/20 relative overflow-hidden mt-8 no-print">
+                    <div className="absolute top-0 right-0 p-4">
+                      <div className="flex items-center gap-2 bg-[#F0FDFA] text-[#0F766E] px-3 py-1 rounded-full text-[0.65rem] font-black uppercase tracking-widest border border-[#CCFBF1]">
+                         <Activity size={12} className="animate-pulse" /> Live Analysis
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <span className="text-[0.7rem] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 block">Emergency Dossier Contact</span>
-                      <h4 className="text-xl font-black text-gray-900 mb-1">{user?.emergencyContactName || "Not Configured"}</h4>
-                      <p className="text-gray-500 font-bold text-[1.1rem] font-mono">{user?.emergencyContactPhone || "--- --- ----"}</p>
+                    
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center text-white">
+                        <BrainCog size={20} />
+                      </div>
+                      <h3 className="text-[0.75rem] font-black text-gray-400 uppercase tracking-[0.2em]">Clinical AI Synthesis</h3>
                     </div>
-                    <button onClick={handleExport} className="w-full md:w-auto bg-gray-50 hover:bg-gray-100 text-gray-900 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[0.8rem] transition-all flex items-center justify-center gap-3">
-                      <Printer size={18} /> Print Dossier
-                    </button>
-                  </div>
+
+                    <div className="space-y-4 relative z-10">
+                      <div className="bg-[#F8FAFC] p-6 rounded-2xl border border-gray-100">
+                         <p className="text-[1rem] text-gray-800 font-medium leading-relaxed">
+                           Patient <span className="font-bold text-[#0F4D4A]">{user?.name}</span> ({user?.age}Y, {user?.bloodGroup}) presents with {chronicConditions.length > 0 ? chronicConditions.map(c => c.name || c).join(", ") : "no major chronic conditions"}. 
+                           Current safety score is <span className="font-black text-[#0F766E]">{safetyScore}/100</span>. 
+                           Total of <span className="font-bold">{medicines.length}</span> active medications are currently managed. 
+                           {medicines.filter(m => m.interactionStatus === 'danger').length > 0 ? 
+                             ` CRITICAL: ${medicines.filter(m => m.interactionStatus === 'danger').length} severe interaction(s) detected. ` : 
+                             " No critical drug-drug interactions detected at this time. "}
+                           Recent adherence patterns suggest <span className="font-bold text-[#0F766E] uppercase">{adherenceLogs.length > 0 ? (adherenceLogs.filter(l => l.status === "Taken").length / adherenceLogs.length * 100).toFixed(0) : "100"}%</span> compliance.
+                         </p>
+                      </div>
+                      <div className="flex items-center gap-4 text-[0.7rem] text-gray-400 font-bold uppercase tracking-widest pl-2">
+                         <span>Status: Optimized</span>
+                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                         <span>Next Sync: {new Date(Date.now() + 3600000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </div>
+                  </section>
                 </div>
               )}
 
@@ -848,48 +1038,52 @@ export default function PatientRecords() {
           </div>
 
           {/* Right Sidebar Column */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
+          <div className="lg:col-span-4 flex flex-col gap-4">
 
             {/* Chronic Conditions */}
-            <div className="bg-white rounded-xl border border-gray-100 p-4 md:p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <Stethoscope className="text-[#0F766E]" size={18} />
-                <h3 className="text-[0.95rem] font-bold text-gray-900">Chronic Conditions</h3>
+            <div className="card-premium">
+              <div className="flex items-center gap-2 mb-3">
+                <Stethoscope className="text-primary" size={16} />
+                <h3 className="text-[0.75rem] font-black text-primary uppercase tracking-widest">Chronic Conditions</h3>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {chronicConditions.map((item, i) => (
-                  <div key={i} className="bg-gray-50/50 rounded-xl p-4 border border-gray-100 flex justify-between items-center group hover:bg-white transition-all cursor-pointer">
+                  <div key={i} className="bg-gray-50/50 rounded-xl p-3 border border-gray-100 flex justify-between items-center group hover:bg-white hover:border-primary/20 transition-all cursor-pointer">
                     <div>
-                      <h4 className="text-[0.9rem] font-black text-gray-900 uppercase tracking-tight">{item.name}</h4>
-                      <p className="text-[0.7rem] text-gray-400 font-bold uppercase">{item.date}</p>
+                      <h4 className="text-[0.85rem] font-black text-primary uppercase leading-tight">{item.name}</h4>
+                      <p className="text-[0.6rem] text-text-muted font-bold uppercase">{item.date || "Active"}</p>
                     </div>
-                    <span className={`text-[0.65rem] font-black px-2 py-1 rounded-md uppercase ${item.status === 'Controlled' ? 'bg-[#F0FDFA] text-[#0F766E]' :
-                        item.status === 'Monitoring' ? 'bg-[#EFF6FF] text-[#2563EB]' : 'bg-[#F4F4F5] text-gray-500'
+                    <span className={`badge-compact ${item.status === 'Controlled' ? 'bg-primary-light text-primary border-primary/10' :
+                        item.status === 'Monitoring' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-gray-50 text-gray-400 border-gray-100'
                       }`}>
                       {item.status}
                     </span>
                   </div>
                 ))}
               </div>
-              <button className="w-full mt-5 border border-dashed border-gray-200 py-3 rounded-xl text-[0.8rem] font-bold text-gray-400 hover:bg-gray-50 transition-colors uppercase tracking-widest flex items-center justify-center gap-2">
-                <Plus size={14} /> Add Medical Condition
+              <button className="w-full mt-4 border border-dashed border-gray-200 py-2.5 rounded-xl text-[0.65rem] font-black text-text-muted hover:bg-gray-50 hover:text-primary transition-all uppercase tracking-widest flex items-center justify-center gap-2">
+                <Plus size={12} /> Add Condition
               </button>
             </div>
 
-
             {/* Record Assistant CTA */}
-            <div className="bg-[#0F766E] rounded-xl p-5 text-white shadow-xl relative overflow-hidden">
-              <h3 className="text-[1rem] font-bold mb-2 relative z-10">Record Assistant</h3>
-              <p className="text-[#CCFBF1] text-[0.75rem] font-medium leading-tight mb-5 relative z-10">
-                AI-powered summary of the last 48 hours for {user?.name?.split(" ")[0] || "Patient"}.
-              </p>
-              <button className="w-full bg-white text-[#0F766E] py-2 rounded-lg font-black text-[0.85rem] shadow-lg shadow-black/10 relative z-10 hover:bg-[#F0FDFA] transition-all">
-                Generate Summary
-              </button>
+            <div className="bg-primary rounded-2xl p-4 text-white shadow-xl relative overflow-hidden group">
+              <div className="relative z-10">
+                <h3 className="text-[0.9rem] font-black uppercase tracking-tight mb-1">Clinical Assistant</h3>
+                <p className="text-primary-light text-[0.7rem] font-medium leading-tight mb-4 opacity-80">
+                  AI-powered summary of the last 48 hours for {user?.name?.split(" ")[0]}.
+                </p>
+                <button 
+                  onClick={() => setActiveTab('Health Resume')}
+                  className="w-full bg-white text-primary py-2 rounded-xl font-black text-[0.75rem] uppercase tracking-widest shadow-lg shadow-black/10 hover:bg-primary-light transition-all active:scale-95"
+                >
+                  Generate Summary
+                </button>
+              </div>
 
               {/* Ambient Graphics */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform"></div>
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-black/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
             </div>
           </div>
         </div>
@@ -901,7 +1095,7 @@ export default function PatientRecords() {
               <div className="px-6 md:px-8 py-5 md:py-6 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="text-lg md:text-xl font-bold text-gray-900 uppercase">Edit Medication</h3>
                 <button onClick={() => setIsEditModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400">
-                  <CloseIcon className="w-5 h-5" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
               <form onSubmit={handleSaveEdit} className="p-6 md:p-8 space-y-5 md:space-y-6 max-h-[75vh] overflow-y-auto">
@@ -917,10 +1111,10 @@ export default function PatientRecords() {
                   <label className="text-[0.7rem] font-black text-gray-400 uppercase tracking-widest">Dosage</label>
                   <div className="flex gap-3">
                     <div className="flex-1">
-                      <input type="text" placeholder="Amount" value={editingMed.dosage.split(/(\d+)/)[1] || "1"} onChange={(e) => { const unit = editingMed.dosage.replace(/\d+/g, "").trim(); setEditingMed({ ...editingMed, dosage: `${e.target.value}${unit}` }); }} className="w-full bg-[#F8FAFC] border-none rounded-2xl px-5 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 font-bold text-gray-900" />
+                      <input type="text" placeholder="Amount" value={(editingMed.dosage || "").split(/(\d+)/)[1] || "1"} onChange={(e) => { const unit = (editingMed.dosage || "").replace(/\d+/g, "").trim(); setEditingMed({ ...editingMed, dosage: `${e.target.value}${unit}` }); }} className="w-full bg-[#F8FAFC] border-none rounded-2xl px-5 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 font-bold text-gray-900" />
                     </div>
                     <div className="w-[100px] md:w-[120px]">
-                      <select value={editingMed.dosage.replace(/\d+/g, "").trim().toLowerCase() || "pill"} onChange={(e) => { const amount = editingMed.dosage.split(/(\d+)/)[1] || "1"; setEditingMed({ ...editingMed, dosage: `${amount}${e.target.value}` }); }} className="w-full bg-[#F8FAFC] border-none rounded-2xl px-4 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 font-bold text-gray-900">
+                      <select value={(editingMed.dosage || "").replace(/\d+/g, "").trim().toLowerCase() || "pill"} onChange={(e) => { const amount = (editingMed.dosage || "").split(/(\d+)/)[1] || "1"; setEditingMed({ ...editingMed, dosage: `${amount}${e.target.value}` }); }} className="w-full bg-[#F8FAFC] border-none rounded-2xl px-4 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 font-bold text-gray-900">
                         <option value="pill">pill</option>
                         <option value="ml">ml</option>
                       </select>

@@ -98,10 +98,14 @@ export default function Profile() {
     emergencyContactPhone: '',
     photoURL: '',
     diseases: [],
-    allergies: []
+    allergies: [],
+    pastIllnesses: [],
+    primaryDoctor: '',
+    specialNotes: ''
   });
   const [currentDisease, setCurrentDisease] = useState("");
   const [currentAllergy, setCurrentAllergy] = useState("");
+  const [currentPastIllness, setCurrentPastIllness] = useState("");
   const [diseaseSuggestions, setDiseaseSuggestions] = useState([]);
   const [allergySuggestions, setAllergySuggestions] = useState([]);
 
@@ -118,7 +122,10 @@ export default function Profile() {
         emergencyContactPhone: user.emergencyContactPhone || '',
         photoURL: user.photoURL || '',
         diseases: user.diseases || [],
-        allergies: user.allergies || []
+        allergies: user.allergies || [],
+        pastIllnesses: user.pastIllnesses || [],
+        primaryDoctor: user.primaryDoctor || '',
+        specialNotes: user.specialNotes || ''
       });
     }
   }, [user]);
@@ -430,6 +437,64 @@ export default function Profile() {
                     onChange={(e) => setFormData({...formData, emergencyContactPhone: e.target.value})}
                     className="w-full bg-[#F8FAFC] border-none rounded-2xl py-4 px-5 font-bold text-gray-900 focus:ring-2 focus:ring-[#0F766E]/20"
                     placeholder="+1 234 567 890"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* New: Past Major Illnesses */}
+            <div className="pt-6 border-t border-gray-50 space-y-4">
+              <p className="text-[0.7rem] font-black text-gray-500 uppercase tracking-widest">Past Major Illnesses</p>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={currentPastIllness}
+                  onChange={(e) => setCurrentPastIllness(e.target.value)}
+                  className="flex-1 bg-[#F8FAFC] border-none rounded-2xl py-3 px-4 font-bold text-gray-900 focus:ring-2 focus:ring-[#0F766E]/20 text-[0.9rem]"
+                  placeholder="e.g. Pneumonia (2022)"
+                />
+                <button 
+                  type="button"
+                  onClick={() => {
+                    if (currentPastIllness.trim()) {
+                      setFormData({...formData, pastIllnesses: [...(formData.pastIllnesses || []), currentPastIllness.trim()]});
+                      setCurrentPastIllness("");
+                    }
+                  }}
+                  className="bg-gray-800 text-white px-4 rounded-2xl font-bold text-[0.8rem]"
+                >Add</button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {formData.pastIllnesses?.map((p, i) => (
+                  <span key={i} className="bg-gray-100 text-gray-600 px-3 py-1.5 rounded-xl text-[0.7rem] font-black uppercase flex items-center gap-2 border border-gray-200">
+                    {p}
+                    <button type="button" onClick={() => setFormData({...formData, pastIllnesses: formData.pastIllnesses.filter((_, idx) => idx !== i)})}><X size={12} /></button>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* New: Primary Physician & Notes */}
+            <div className="pt-6 border-t border-gray-50 space-y-4">
+              <p className="text-[0.7rem] font-black text-[#0F4D4A] uppercase tracking-widest">Clinical Contacts & Notes</p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[0.8rem] font-bold text-gray-400 uppercase tracking-wider mb-2">Primary Physician</label>
+                  <input 
+                    type="text" 
+                    value={formData.primaryDoctor}
+                    onChange={(e) => setFormData({...formData, primaryDoctor: e.target.value})}
+                    className="w-full bg-[#F8FAFC] border-none rounded-2xl py-4 px-5 font-bold text-gray-900 focus:ring-2 focus:ring-[#0F766E]/20"
+                    placeholder="e.g. Dr. Sarah Jenkins"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[0.8rem] font-bold text-gray-400 uppercase tracking-wider mb-2">Special Instructions / Notes</label>
+                  <textarea 
+                    value={formData.specialNotes}
+                    onChange={(e) => setFormData({...formData, specialNotes: e.target.value})}
+                    className="w-full bg-[#F8FAFC] border-none rounded-2xl py-4 px-5 font-bold text-gray-900 focus:ring-2 focus:ring-[#0F766E]/20 min-h-[100px]"
+                    placeholder="Any specific instructions for emergency responders..."
                   />
                 </div>
               </div>
