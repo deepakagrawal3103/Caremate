@@ -1,4 +1,4 @@
-# CareMate (MedSafe AI) 🏥
+# CareMate 🏥
 
 CareMate is a high-fidelity, AI-powered medication management and clinical safety platform designed with a premium **"Digital Atelier"** aesthetic. It provides patients and clinicians with a unified interface to track medications, analyze drug-drug interactions, and manage emergency profiles.
 
@@ -51,4 +51,4 @@ CareMate follows the **Digital Atelier** design system:
 - **Vibrant Accents**: Utilizes a specific "CareMate Teal" (#0F4D4A) to signify clinical excellence and reliability.
 
 ---
-Developed with ❤️ by the MedSafe AI Team.
+Developed with ❤️ by the CareMate AI Team.
